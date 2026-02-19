@@ -19,7 +19,7 @@ const DashboardSettings: React.FC = () => {
   // --- ESTADO DA JORNADA ---
   const [workConfig, setWorkConfig] = useState<WorkConfig>({
     startHour: '09:00', 
-    endHour: '20:00', 
+    endHour: '19:00', 
     breakStart: '13:00', 
     breakEnd: '14:00', 
     daysOff: [0] // Domingo por padrão
@@ -37,7 +37,6 @@ const DashboardSettings: React.FC = () => {
     repeatCount: 1 
   });
 
-  // Auxiliar para gerar opções de horário
   const hoursOptions = Array.from({ length: 48 }, (_, i) => {
     const h = Math.floor(i / 2);
     const m = i % 2 === 0 ? '00' : '30';
@@ -69,7 +68,7 @@ const DashboardSettings: React.FC = () => {
         ...workConfig,
         updatedAt: serverTimestamp()
       });
-      alert("Jornada de trabalho atualizada!");
+      alert("Configuração de horários atualizada!");
     } catch (e) {
       alert("Erro ao salvar configuração.");
     }
@@ -86,7 +85,6 @@ const DashboardSettings: React.FC = () => {
         ...newBlock,
         createdAt: serverTimestamp()
       });
-      // Resetar formulário de bloqueio
       setNewBlock({ 
         title: '', date: new Date().toISOString().split('T')[0], 
         startTime: '11:00', endTime: '12:00', 
@@ -100,12 +98,12 @@ const DashboardSettings: React.FC = () => {
   };
 
   const handleDeleteBlock = async (id: string) => {
-    if (window.confirm("Remover este bloqueio de agenda?")) {
+    if (window.confirm("Remover este bloqueio da agenda?")) {
       await deleteDoc(doc(db, "businesses", CLIENT_ID, "timeBlocks", id));
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-emerald-500" /></div>;
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#b5967a]" /></div>;
 
   return (
     <div className="space-y-12 animate-in slide-in-from-bottom-4 pb-24">
@@ -113,28 +111,28 @@ const DashboardSettings: React.FC = () => {
       {/* SEÇÃO 1: JORNADA DE TRABALHO */}
       <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-2xl">
         <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 bg-emerald-600/20 rounded-2xl flex items-center justify-center text-emerald-500">
+          <div className="w-12 h-12 bg-[#b5967a]/10 rounded-2xl flex items-center justify-center text-[#b5967a]">
             <Clock size={24} />
           </div>
           <div>
             <h3 className="text-white font-bold text-lg">Jornada de Trabalho</h3>
-            <p className="text-stone-500 text-xs uppercase tracking-widest font-black">Horários de Funcionamento</p>
+            <p className="text-[#d4bca9] text-[10px] uppercase tracking-[0.3em] font-black">Configuração de Horários</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
             { label: 'Abertura', key: 'startHour' },
-            { label: 'Encerramento', key: 'endHour' },
+            { label: 'Fecho', key: 'endHour' },
             { label: 'Início Pausa', key: 'breakStart' },
             { label: 'Fim Pausa', key: 'breakEnd' },
           ].map((item) => (
             <div key={item.key}>
-              <label className="text-[10px] text-stone-500 uppercase font-black mb-2 block ml-1">{item.label}</label>
+              <label className="text-[10px] text-stone-500 uppercase font-black mb-2 block ml-1 tracking-widest">{item.label}</label>
               <select 
                 value={(workConfig as any)[item.key]} 
                 onChange={e => setWorkConfig({...workConfig, [item.key]: e.target.value})}
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 appearance-none font-bold transition-all shadow-inner"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] appearance-none font-bold transition-all shadow-inner"
               >
                 {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
               </select>
@@ -144,7 +142,7 @@ const DashboardSettings: React.FC = () => {
 
         <div className="mt-8 pt-8 border-t border-white/5">
           <h4 className="text-stone-400 text-sm font-bold mb-4 flex items-center gap-2">
-            <AlertCircle size={16} className="text-emerald-500" /> Dias de Encerramento:
+            <AlertCircle size={16} className="text-[#b5967a]" /> Dias de Folga/Encerramento:
           </h4>
           <div className="flex flex-wrap gap-2">
             {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => (
@@ -156,10 +154,10 @@ const DashboardSettings: React.FC = () => {
                     : [...workConfig.daysOff, idx];
                   setWorkConfig({...workConfig, daysOff: newDays});
                 }} 
-                className={`px-5 py-3 rounded-xl text-xs font-black transition-all border ${
+                className={`px-6 py-3 rounded-xl text-xs font-black transition-all border ${
                   workConfig.daysOff.includes(idx) 
-                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-900/20' 
-                  : 'bg-stone-950 border-white/5 text-stone-600 hover:text-stone-400'
+                  ? 'bg-[#b5967a] border-[#b5967a] text-white shadow-lg shadow-[#b5967a]/20' 
+                  : 'bg-stone-950 border-white/5 text-stone-600 hover:text-[#d4bca9]'
                 }`}
               >
                 {day.toUpperCase()}
@@ -171,7 +169,7 @@ const DashboardSettings: React.FC = () => {
         <button 
           onClick={handleSaveConfig} 
           disabled={isSavingConfig}
-          className="mt-10 flex items-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-5 rounded-2xl font-black shadow-xl shadow-emerald-900/30 transition-all active:scale-95 disabled:opacity-50"
+          className="mt-10 flex items-center gap-3 bg-[#b5967a] hover:bg-[#a38569] text-white px-10 py-5 rounded-2xl font-black shadow-xl shadow-[#b5967a]/10 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-sm"
         >
           {isSavingConfig ? <Loader2 className="animate-spin" /> : <Save size={20}/>}
           Guardar Configuração
@@ -184,57 +182,57 @@ const DashboardSettings: React.FC = () => {
         {/* Formulário de Bloqueio */}
         <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-xl">
            <h3 className="text-white font-bold mb-6 flex items-center gap-3 text-lg">
-             <Ban className="text-emerald-500"/> Bloquear Horário
+             <Ban className="text-[#b5967a]"/> Bloquear Horário
            </h3>
            <form onSubmit={handleAddTimeBlock} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-stone-500 font-bold ml-1">Motivo do Bloqueio</label>
+                <label className="text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Motivo (Ex: Formação)</label>
                 <input 
                   required 
-                  placeholder="Ex: Consulta Médica, Almoço Externo..." 
+                  placeholder="Introduza o motivo..." 
                   value={newBlock.title} 
                   onChange={e => setNewBlock({...newBlock, title: e.target.value})} 
-                  className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 transition-all" 
+                  className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] transition-all font-medium" 
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-stone-500 font-bold ml-1">Data</label>
+                <label className="text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Data</label>
                 <input 
                   required 
                   type="date" 
                   value={newBlock.date} 
                   onChange={e => setNewBlock({...newBlock, date: e.target.value})} 
-                  className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 color-scheme-dark transition-all" 
+                  className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] color-scheme-dark transition-all font-medium" 
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                   <label className="text-[10px] uppercase text-stone-500 font-bold ml-1">Desde as</label>
-                   <select value={newBlock.startTime} onChange={e => setNewBlock({...newBlock, startTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white font-bold outline-none focus:border-emerald-500 transition-all">
+                   <label className="text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Desde as</label>
+                   <select value={newBlock.startTime} onChange={e => setNewBlock({...newBlock, startTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white font-bold outline-none focus:border-[#b5967a] transition-all">
                       {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
                    </select>
                 </div>
                 <div className="space-y-2">
-                   <label className="text-[10px] uppercase text-stone-500 font-bold ml-1">Até às</label>
-                   <select value={newBlock.endTime} onChange={e => setNewBlock({...newBlock, endTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white font-bold outline-none focus:border-emerald-500 transition-all">
+                   <label className="text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Até às</label>
+                   <select value={newBlock.endTime} onChange={e => setNewBlock({...newBlock, endTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white font-bold outline-none focus:border-[#b5967a] transition-all">
                       {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
                    </select>
                 </div>
               </div>
 
-              {/* Recorrência */}
+              {/* Recorrência Customizada Stacy Nails */}
               <div className="bg-stone-950 border border-white/5 p-5 rounded-2xl space-y-4 shadow-inner">
                 <div className="flex items-center justify-between">
                    <div className="flex items-center gap-3 text-stone-300 font-bold text-sm">
-                     <Repeat size={18} className="text-emerald-500"/> Tornar Recorrente
+                     <Repeat size={18} className="text-[#b5967a]"/> Repetir este bloqueio
                    </div>
                    <input 
                     type="checkbox" 
                     checked={newBlock.isRecurring} 
                     onChange={e => setNewBlock({...newBlock, isRecurring: e.target.checked})} 
-                    className="w-6 h-6 accent-emerald-500 cursor-pointer" 
+                    className="w-6 h-6 accent-[#b5967a] cursor-pointer" 
                    />
                 </div>
                 {newBlock.isRecurring && (
@@ -247,23 +245,23 @@ const DashboardSettings: React.FC = () => {
                           onClick={() => setNewBlock({...newBlock, recurringType: type as any})} 
                           className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border transition-all ${
                             newBlock.recurringType === type 
-                            ? 'bg-emerald-600 border-emerald-600 text-white' 
+                            ? 'bg-[#b5967a] border-[#b5967a] text-white shadow-md' 
                             : 'text-stone-500 border-white/5 hover:text-stone-300'
                           }`}
                          >
-                           {type === 'daily' ? 'Diário' : type === 'weekly' ? 'Semanal' : 'Mensual'}
+                           {type === 'daily' ? 'Diário' : type === 'weekly' ? 'Semanal' : 'Mensal'}
                          </button>
                        ))}
                      </div>
                      <div className="flex items-center justify-between bg-stone-900 p-4 rounded-2xl border border-white/5">
                         <span className="text-stone-400 font-bold text-xs flex items-center gap-2">
-                          <Hash size={16} className="text-emerald-500"/> Repetir quantas vezes?
+                          <Hash size={16} className="text-[#b5967a]"/> Número de repetições:
                         </span>
                         <input 
                           type="number" min="1" max="52" 
                           value={newBlock.repeatCount} 
                           onChange={e => setNewBlock({...newBlock, repeatCount: parseInt(e.target.value)})} 
-                          className="w-16 bg-stone-950 border border-white/5 rounded-lg p-2 text-white text-center font-black outline-none focus:border-emerald-500" 
+                          className="w-16 bg-stone-950 border border-white/5 rounded-lg p-2 text-white text-center font-black outline-none focus:border-[#b5967a]" 
                         />
                      </div>
                   </div>
@@ -272,9 +270,9 @@ const DashboardSettings: React.FC = () => {
               <button 
                 type="submit" 
                 disabled={isAddingBlock}
-                className="w-full py-5 bg-white text-stone-950 font-black rounded-2xl shadow-xl active:scale-95 transition-all hover:bg-emerald-50"
+                className="w-full py-5 bg-white text-stone-950 font-black rounded-2xl shadow-xl active:scale-95 transition-all hover:bg-[#fdfbf7] uppercase tracking-widest text-xs"
               >
-                {isAddingBlock ? <Loader2 className="animate-spin" /> : "Aplicar Bloqueio"}
+                {isAddingBlock ? <Loader2 className="animate-spin text-[#b5967a]" /> : "Bloquear Horário"}
               </button>
            </form>
         </div>
@@ -282,32 +280,32 @@ const DashboardSettings: React.FC = () => {
         {/* Lista de Bloqueios */}
         <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-xl flex flex-col">
            <h3 className="text-white font-bold mb-6 flex items-center gap-3 text-lg">
-             <LayoutList className="text-emerald-500"/> Bloqueios Ativos
+             <LayoutList className="text-[#b5967a]"/> Bloqueios na Agenda
            </h3>
            <div className="space-y-3 overflow-y-auto max-h-[550px] pr-2 scrollbar-thin scrollbar-thumb-stone-800 text-left">
               {timeBlocks.length === 0 ? (
-                <div className="text-center py-10 text-stone-600 italic">Sem bloqueios ativos na agenda.</div>
+                <div className="text-center py-16 text-stone-600 italic font-light">Não existem bloqueios ativos no momento.</div>
               ) : (
                 timeBlocks.map(block => (
-                  <div key={block.id} className="bg-stone-950 border border-white/5 p-5 rounded-2xl flex justify-between items-center animate-in zoom-in-95 hover:border-emerald-900/20 transition-all shadow-md">
+                  <div key={block.id} className="bg-stone-950 border border-white/5 p-5 rounded-2xl flex justify-between items-center animate-in zoom-in-95 hover:border-[#b5967a]/20 transition-all shadow-md">
                      <div>
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="text-stone-200 font-bold text-sm">{block.title}</h4>
-                          {block.isRecurring && <Repeat size={12} className="text-emerald-500"/>}
+                          {block.isRecurring && <Repeat size={12} className="text-[#b5967a]"/>}
                         </div>
                         <p className="text-stone-500 text-[10px] uppercase font-black tracking-widest">
                           {block.date} • {block.startTime}-{block.endTime}
                         </p>
                         {block.isRecurring && (
-                          <p className="text-emerald-600/60 text-[9px] font-black uppercase mt-1">
-                            {block.recurringType} ({block.repeatCount}x)
+                          <p className="text-[#d4bca9] text-[9px] font-black uppercase mt-1">
+                            Repete: {block.recurringType} ({block.repeatCount}x)
                           </p>
                         )}
                      </div>
                      <button 
                       onClick={() => handleDeleteBlock(block.id!)} 
-                      className="text-stone-800 hover:text-red-500 p-2 transition-colors rounded-full"
-                      title="Remover Bloqueio"
+                      className="text-stone-800 hover:text-red-500 p-3 transition-colors rounded-full hover:bg-red-500/5"
+                      title="Eliminar Bloqueio"
                      >
                        <Trash2 size={18}/>
                      </button>
