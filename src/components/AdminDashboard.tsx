@@ -3,7 +3,7 @@ import { auth, db } from '../firebase';
 import { onSnapshot, query, collection, orderBy } from 'firebase/firestore';
 import { 
   LogOut, Heart, LayoutDashboard, Settings, 
-  Briefcase, Palette, Loader2, Download
+  Briefcase, Palette, Download 
 } from 'lucide-react';
 import { Appointment, Service } from '../types';
 import { BUSINESS_INFO, CLIENT_ID } from '../constants';
@@ -17,9 +17,11 @@ import AdminBookingModal from './AdminBookingModal';
 
 interface AdminDashboardProps {
   onLogout: () => void;
+  isInstallable?: boolean;
+  onInstallClick?: () => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable, onInstallClick }) => {
   // --- NAVEGAÇÃO ---
   const [activeTab, setActiveTab] = useState<'appointments' | 'services' | 'visual' | 'settings'>('appointments');
   
@@ -27,41 +29,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [isAdminBookingOpen, setIsAdminBookingOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [dbServices, setDbServices] = useState<Service[]>([]);
-
-  // --- ESTADO PWA (INSTALAÇÃO DA APP) ---
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-
-  // Escutar evento de instalação PWA do Navegador
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      // Previne que o Chrome mostre o mini-infobar nativo
-      e.preventDefault();
-      // Guarda o evento para dispararmos quando o utilizador clicar no nosso botão
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    // Mostra o prompt de instalação nativo
-    deferredPrompt.prompt();
-    // Espera que o utilizador responda ao prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      console.log('Utilizador aceitou a instalação da App');
-    }
-    // Limpa o prompt guardado pois só pode ser usado uma vez
-    setDeferredPrompt(null);
-    setIsInstallable(false);
-  };
 
   // Carregar serviços apenas uma vez no pai para compartilhar com o modal
   useEffect(() => {
@@ -133,11 +100,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </nav>
           
           <div className="flex items-center gap-6">
-            {/* BOTÃO PWA (SÓ APARECE SE FOR INSTALÁVEL) */}
+            {/* O BOTÃO MAGICO DE INSTALAÇÃO (PWA) */}
             {isInstallable && (
               <button 
-                onClick={handleInstallClick} 
-                className="flex items-center gap-2 bg-[#b5967a]/20 text-[#b5967a] px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#b5967a] hover:text-white transition-all border border-[#b5967a]/30 animate-in fade-in"
+                onClick={onInstallClick} 
+                className="flex items-center gap-2 bg-[#b5967a]/20 text-[#b5967a] px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#b5967a] hover:text-white transition-all border border-[#b5967a]/30 animate-in zoom-in"
               >
                 <Download size={16} /> Instalar App
               </button>
@@ -176,7 +143,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
       <footer className="p-4 text-center text-stone-800 text-[10px] uppercase font-bold tracking-[0.4em] bg-stone-950 border-t border-white/5 flex flex-col md:flex-row justify-center items-center gap-2">
         <span>Sistema de Gestão Stacy Costa • Allan Dev v3.5</span>
-        {isInstallable && <span className="hidden md:inline text-[#b5967a] px-2">• PWA Ready</span>}
+        {isInstallable && <span className="hidden md:inline text-[#b5967a] px-2">• Pronto a Instalar (PWA)</span>}
       </footer>
 
       {/* MODAL ÚNICO GERENCIADO PELO PAI */}
