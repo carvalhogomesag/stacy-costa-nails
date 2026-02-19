@@ -1,0 +1,2913 @@
+
+==================================================
+ARQUIVO: index.html
+==================================================
+
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- SEO & WhatsApp Preview -->
+    <title>La Barbière Espaço Homem | A Tua Barbearia em Sintra - Estilo e Brio</title>
+    <meta name="description" content="Descobre a La Barbière Espaço Homem em Sintra. Especialistas em cortes modernos, design de barba e um atendimento premium focado no perfeccionismo." />
+    
+    <!-- Metatags Open Graph (WhatsApp, Facebook) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://la-barbiere-sintra.netlify.app/" />
+    <meta property="og:title" content="La Barbière Espaço Homem | Sintra" />
+    <meta property="og:description" content="Mais do que uma barba, um estilo de vida. Vem conhecer o nosso espaço em Sintra." />
+    <meta property="og:image" content="https://la-barbiere-sintra.netlify.app/capa-whatsapp.webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- JSON-LD para Google Maps (SEO Local em Portugal) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BarberShop",
+      "name": "La Barbière Espaço Homem",
+      "telephone": "+351910152688",
+      "priceRange": "€€",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Av. Heliodoro Salgado 102",
+        "addressLocality": "Sintra",
+        "postalCode": "2710-573",
+        "addressCountry": "PT"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 38.8021,
+        "longitude": -9.3813
+      }
+    }
+    </script>
+
+    <!-- ESTILOS Y FUENTES -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        scroll-behavior: smooth;
+      }
+      .font-serif {
+        font-family: 'Playfair Display', serif;
+      }
+    </style>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+        "react/": "https://esm.sh/react@^19.2.4/",
+        "react": "https://esm.sh/react@^19.2.4",
+        "lucide-react": "https://esm.sh/lucide-react@^0.564.0"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="/src/index.css">
+  </head>
+  
+  <!-- Seleção em cor Emerald para combinar com a nova identidade -->
+  <body class="bg-black text-stone-100 selection:bg-emerald-600 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>
+
+
+==================================================
+ARQUIVO: package.json
+==================================================
+
+{
+  "name": "barbearia-premium-lisboa",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "firebase": "^12.9.0",
+    "lucide-react": "^0.564.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.11",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}
+
+
+
+==================================================
+ARQUIVO: src\App.tsx
+==================================================
+
+import React, { useState, useEffect } from 'react';
+import { 
+  Scissors, MapPin, Phone, Clock, Star, 
+  CheckCircle2, Quote, ArrowRight, ShieldCheck, 
+  Heart, Users, ExternalLink, Camera, Sparkles, Loader2,
+  Instagram, Facebook, Music2 // Music2 representa o TikTok
+} from 'lucide-react';
+
+// FIREBASE
+import { db } from './firebase';
+import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
+
+// COMPONENTES
+import Navbar from './components/Navbar';
+import BookingModal from './components/BookingModal';
+import AdminLogin from './components/AdminLogin';
+import AdminDashboard from './components/AdminDashboard';
+
+// DADOS E IMAGENS
+import { BUSINESS_INFO, REVIEWS, GALLERY_IMAGES, CLIENT_ID } from './constants';
+import { Service, SocialLinks } from './types';
+import mapaImg from './assets/images/mapa-localizacao.webp'; 
+
+const MAP_SOURCE = mapaImg;
+
+const App: React.FC = () => {
+  // --- ESTADOS DE CONTROLO ---
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+
+  // --- ESTADOS DE DADOS DINÂMICOS ---
+  const [dynamicServices, setDynamicServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  
+  // Metadados Visuais (Redes Sociais e Fotos do Firestore)
+  const [visualMetadata, setVisualMetadata] = useState<{
+    socialLinks?: SocialLinks;
+    galleryUrls?: string[];
+  }>({});
+
+  // --- ESCUTAR SERVIÇOS DO FIREBASE (Multi-tenant) ---
+  useEffect(() => {
+    const q = query(
+      collection(db, "businesses", CLIENT_ID, "services"), 
+      orderBy("name", "asc")
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const servicesList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Service));
+      setDynamicServices(servicesList);
+      setLoadingServices(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // --- ESCUTAR METADADOS (Redes Sociais e Galeria) ---
+  useEffect(() => {
+    const unsubMetadata = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "metadata"), (snap) => {
+      if (snap.exists()) {
+        setVisualMetadata(snap.data());
+      }
+    });
+    return () => unsubMetadata();
+  }, []);
+
+  // Função auxiliar para pegar foto (Firestore ou Local Fallback)
+  const getImg = (index: number) => {
+    if (visualMetadata.galleryUrls && visualMetadata.galleryUrls[index]) {
+      return visualMetadata.galleryUrls[index];
+    }
+    return GALLERY_IMAGES[index]?.url;
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col selection:bg-emerald-600/30 selection:text-emerald-900 bg-stone-50">
+      
+      {/* NAVBAR */}
+      <Navbar onAdminClick={() => setIsAdminLoginOpen(true)} />
+
+      {/* ADMIN COMPONENTS */}
+      <AdminLogin 
+        isOpen={isAdminLoginOpen} 
+        onClose={() => setIsAdminLoginOpen(false)} 
+        onLoginSuccess={() => setIsDashboardOpen(true)}
+      />
+      
+      {isDashboardOpen && (
+        <AdminDashboard onLogout={() => setIsDashboardOpen(false)} />
+      )}
+
+      {/* BOOKING MODAL */}
+      <BookingModal 
+        isOpen={isBookingOpen} 
+        onClose={() => setIsBookingOpen(false)} 
+      />
+
+      {/* HERO SECTION */}
+      <section id="inicio" className="relative min-h-[90vh] md:min-h-[95vh] flex items-center justify-center overflow-hidden bg-stone-900">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={getImg(0)} 
+            alt={BUSINESS_INFO.name} 
+            className="w-full h-full object-cover opacity-40 scale-105" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-stone-900/90 to-stone-900"></div> 
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10 pt-24 md:pt-20">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex flex-wrap justify-center items-center gap-2 bg-emerald-600/10 border border-emerald-600/20 px-4 py-2 rounded-full mb-8 animate-fade-in text-emerald-500">
+              <Star size={14} fill="currentColor" />
+              <span className="text-xs font-bold uppercase tracking-[0.2em]">O Teu Espaço de Confiança em Sintra</span>
+              <span className="text-stone-400 text-xs font-medium uppercase tracking-widest hidden md:inline"> | Perfeccionismo & Arte</span>
+            </div>
+            
+            <h2 className="font-serif text-5xl md:text-8xl font-bold mb-8 leading-[1.1] text-white tracking-tight">
+              {BUSINESS_INFO.name} <br />
+              <span className="text-emerald-600 italic">{BUSINESS_INFO.subName}</span>
+            </h2>
+            
+            <p className="text-stone-400 text-lg md:text-2xl max-w-2xl mx-auto mb-12 font-light">
+              Elevamos o conceito de barbearia em Sintra. Profissionalismo, brio e um ambiente exclusivo para o homem moderno.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-5 justify-center px-4">
+              <button 
+                onClick={() => setIsBookingOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-5 rounded-full text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-xl shadow-emerald-900/20 group"
+              >
+                Reservar Agora <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+              </button>
+              <a href="#servicos" className="bg-white/5 border border-white/10 text-white px-10 py-5 rounded-full text-lg font-bold hover:bg-white/10 transition-all shadow-sm">Ver Serviços</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* HIGHLIGHTS */}
+      <section className="py-16 md:py-24 bg-white relative overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
+            {[
+              { icon: ShieldCheck, title: "Brio & Perfeição", text: "Cada corte é uma obra de arte executada com o máximo rigor e atenção ao detalhe." },
+              { icon: Users, title: "Atendimento Premium", text: "Um espaço pensado para o conforto do homem, onde a simpatia e o brio andam juntos." },
+              { icon: Sparkles, title: "Localização Central", text: "Situados no coração de Sintra, prontos para renovar o teu estilo com conveniência." }
+            ].map((item, index) => (
+              <div key={index} className="flex flex-col items-center text-center group">
+                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 mb-6 group-hover:scale-110 transition-transform">
+                  <item.icon size={28} />
+                </div>
+                <h3 className="text-xl font-bold font-serif text-stone-800 mb-3">{item.title}</h3>
+                <p className="text-stone-500 leading-relaxed text-sm">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SERVIÇOS DINÂMICOS */}
+      <section id="servicos" className="py-20 md:py-32 bg-stone-50">
+        <div className="container mx-auto px-4 text-left">
+          <div className="text-center mb-16">
+            <h4 className="text-emerald-600 text-sm font-bold uppercase tracking-[0.4em] mb-4">A Nossa Arte</h4>
+            <h2 className="font-serif text-4xl md:text-6xl font-bold text-stone-900">Serviços Exclusivos</h2>
+          </div>
+
+          {loadingServices ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="animate-spin text-emerald-600" size={40} />
+            </div>
+          ) : dynamicServices.length === 0 ? (
+            <div className="text-center text-stone-500 italic py-10">
+              Estamos a preparar a nossa carta de serviços...
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-x-16 gap-y-12 max-w-5xl mx-auto">
+              {dynamicServices.map((s) => (
+                <div 
+                  key={s.id} 
+                  onClick={() => setIsBookingOpen(true)}
+                  className="group border-b border-stone-200 pb-8 hover:border-emerald-300 transition-all cursor-pointer"
+                >
+                  <div className="flex justify-between items-end mb-4">
+                    <h3 className="text-2xl font-bold font-serif text-stone-800 group-hover:text-emerald-700 transition-colors">{s.name}</h3>
+                    <span className="text-emerald-600 font-bold">{s.price}</span>
+                  </div>
+                  <p className="text-stone-500 text-sm italic">{s.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* SOBRE */}
+      <section id="sobre" className="py-20 md:py-32 bg-white overflow-hidden text-left">
+        <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
+            <div className="relative">
+              <div className="relative z-10 rounded-[3rem] overflow-hidden shadow-2xl aspect-[4/5] border-8 border-stone-100">
+                <img src={getImg(4)} alt={BUSINESS_INFO.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="absolute -bottom-8 -left-8 bg-stone-900 text-white p-8 rounded-3xl max-w-xs shadow-2xl z-20 hidden md:block">
+                <Quote className="text-emerald-500 mb-4" size={32} />
+                <p className="font-medium italic text-lg leading-snug">"{REVIEWS[1].text}"</p>
+                <p className="text-emerald-500 text-xs mt-4 uppercase font-bold tracking-widest">{REVIEWS[1].author}</p>
+              </div>
+            </div>
+            <div>
+              <h2 className="font-serif text-4xl md:text-6xl font-bold mb-8 text-stone-900">
+                {BUSINESS_INFO.name} <br /><span className="text-emerald-600 italic">Paixão pelo Detalhe</span>
+              </h2>
+              <div className="space-y-6 text-stone-600 font-light text-lg">
+                <p>No {BUSINESS_INFO.name}, acreditamos que a barba e o cabelo são a expressão da identidade de cada homem. O nosso espaço em Sintra foi criado para oferecer mais do que um corte: oferecemos brio e perfeccionismo.</p>
+                <p>Com uma equipa dedicada e focada nas tendências atuais, garantimos que cada cliente sai da nossa cadeira com a sua melhor versão reforçada.</p>
+              </div>
+            </div>
+        </div>
+      </section>
+
+      {/* GALERÍA DINÂMICA E REDES SOCIAIS */}
+      <section className="py-20 md:py-24 bg-stone-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+             <h2 className="font-serif text-3xl md:text-5xl font-bold text-stone-900 mb-4 italic">O Nosso Portfolio</h2>
+             <p className="text-stone-500">Trabalhos reais, brio constante.</p>
+          </div>
+          <div className="columns-2 md:columns-4 gap-4 md:gap-6 space-y-4 md:space-y-6">
+            {/* Renderizar os 8 slots de fotos */}
+            {[...Array(8)].map((_, idx) => (
+              <div key={idx} className="rounded-2xl md:rounded-3xl overflow-hidden group break-inside-avoid shadow-sm bg-stone-200">
+                <img 
+                  src={getImg(idx)} 
+                  alt={`Galeria ${idx + 1}`} 
+                  loading="lazy" 
+                  className="w-full grayscale hover:grayscale-0 transition-all duration-700 hover:scale-110 cursor-pointer" 
+                />
+              </div>
+            ))}
+
+            {/* CARD SOCIAL DINÂMICO */}
+            <div className="bg-stone-900 aspect-[3/4] rounded-2xl md:rounded-3xl flex flex-col items-center justify-center p-4 md:p-8 text-center group break-inside-avoid shadow-lg border border-white/5">
+              <Camera size={32} className="text-emerald-500 mb-6 group-hover:scale-110 transition-transform" />
+              <h4 className="text-white font-black text-lg md:text-xl leading-tight mb-6">Acompanha-nos</h4>
+              
+              <div className="flex gap-4">
+                {visualMetadata.socialLinks?.instagram && (
+                  <a href={visualMetadata.socialLinks.instagram} target="_blank" rel="noreferrer" className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white hover:bg-emerald-700 transition-all hover:-translate-y-1">
+                    <Instagram size={24} />
+                  </a>
+                )}
+                {visualMetadata.socialLinks?.facebook && (
+                  <a href={visualMetadata.socialLinks.facebook} target="_blank" rel="noreferrer" className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white hover:bg-emerald-700 transition-all hover:-translate-y-1">
+                    <Facebook size={24} />
+                  </a>
+                )}
+                {visualMetadata.socialLinks?.tiktok && (
+                  <a href={visualMetadata.socialLinks.tiktok} target="_blank" rel="noreferrer" className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white hover:bg-emerald-700 transition-all hover:-translate-y-1">
+                    <Music2 size={24} />
+                  </a>
+                )}
+              </div>
+              
+              {!visualMetadata.socialLinks?.instagram && !visualMetadata.socialLinks?.facebook && !visualMetadata.socialLinks?.tiktok && (
+                <p className="text-stone-500 text-xs italic">Visita-nos em Sintra</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECCIÓN DO ESPAÇO */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+             <div className="order-2 md:order-1 space-y-6 text-left">
+                <h3 className="font-serif text-3xl md:text-4xl text-stone-900 italic">O Teu Momento</h3>
+                <p className="text-stone-600 leading-relaxed">
+                  O nosso salão foi desenhado para proporcionar o máximo conforto. Um ambiente masculino, profissional e acolhedor onde cada detalhe conta para que a tua experiência seja memorável.
+                </p>
+                <div className="flex gap-4">
+                   <div className="rounded-2xl overflow-hidden h-40 flex-1 border border-stone-100">
+                      <img src={getImg(5)} alt="Espaço 1" className="w-full h-full object-cover hover:scale-110 transition-transform duration-700" />
+                   </div>
+                   <div className="rounded-2xl overflow-hidden h-40 flex-1 border border-stone-100">
+                      <img src={getImg(6)} alt="Espaço 2" className="w-full h-full object-cover hover:scale-110 transition-transform duration-700" />
+                   </div>
+                </div>
+             </div>
+             <div className="order-1 md:order-2 h-80 md:h-96 rounded-[3rem] overflow-hidden shadow-xl border-8 border-stone-50">
+                <img src={getImg(7)} alt="Interior Principal" className="w-full h-full object-cover" />
+             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CONTACTO Y MAPA */}
+      <section id="contacto" className="py-20 bg-stone-50 text-left">
+        <div className="container mx-auto px-4 grid lg:grid-cols-12 gap-16">
+          <div className="lg:col-span-5">
+            <h2 className="font-serif text-5xl font-bold mb-10 text-stone-900 italic">Onde Estamos</h2>
+            <div className="space-y-10">
+              <div className="flex gap-6">
+                <div className="w-14 h-14 bg-white shadow-sm rounded-2xl flex items-center justify-center text-emerald-600">
+                   <MapPin size={28} />
+                </div>
+                <div><h4 className="text-stone-900 font-bold text-lg">Morada</h4><p className="text-stone-500">{BUSINESS_INFO.address}<br/>{BUSINESS_INFO.city}</p></div>
+              </div>
+              <div className="flex gap-6">
+                <div className="w-14 h-14 bg-white shadow-sm rounded-2xl flex items-center justify-center text-emerald-600">
+                   <Clock size={28} />
+                </div>
+                <div><h4 className="text-stone-900 font-bold text-lg">Horário</h4><p className="text-stone-500">{BUSINESS_INFO.openingHours}</p></div>
+              </div>
+              <div className="flex gap-6">
+                <div className="w-14 h-14 bg-white shadow-sm rounded-2xl flex items-center justify-center text-emerald-600">
+                   <Phone size={28} />
+                </div>
+                <div><h4 className="text-stone-900 font-bold text-lg">Telemóvel</h4><p className="text-stone-800 text-2xl font-bold">{BUSINESS_INFO.phone}</p></div>
+              </div>
+            </div>
+          </div>
+          <div className="lg:col-span-7 h-[500px] rounded-[3rem] overflow-hidden border-8 border-white shadow-xl relative group">
+            <a href={BUSINESS_INFO.googleMapsUrl} target="_blank" rel="noreferrer" className="block w-full h-full relative">
+              <img src={MAP_SOURCE} alt="Mapa Sintra" className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 transition-all" />
+              <div className="absolute inset-0 flex items-center justify-center bg-stone-900/10">
+                <div className="bg-emerald-600 text-white px-8 py-4 rounded-full font-bold shadow-xl">Abrir Google Maps</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER SOCIAL DINÂMICO */}
+      <footer className="py-20 bg-stone-900 text-white text-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="flex items-center gap-3">
+             <Scissors className="text-emerald-500" size={32} />
+             <div className="text-left">
+                <h1 className="font-serif text-2xl font-bold leading-none uppercase">{BUSINESS_INFO.name}</h1>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-500 font-bold">{BUSINESS_INFO.subName}</p>
+             </div>
+          </div>
+          
+          <div className="flex gap-4">
+            {visualMetadata.socialLinks?.instagram && (
+              <a href={visualMetadata.socialLinks.instagram} target="_blank" rel="noreferrer" className="text-stone-400 hover:text-emerald-500 transition-colors">
+                <Instagram size={20} />
+              </a>
+            )}
+            {visualMetadata.socialLinks?.facebook && (
+              <a href={visualMetadata.socialLinks.facebook} target="_blank" rel="noreferrer" className="text-stone-400 hover:text-emerald-500 transition-colors">
+                <Facebook size={20} />
+              </a>
+            )}
+            {visualMetadata.socialLinks?.tiktok && (
+              <a href={visualMetadata.socialLinks.tiktok} target="_blank" rel="noreferrer" className="text-stone-400 hover:text-emerald-500 transition-colors">
+                <Music2 size={20} />
+              </a>
+            )}
+          </div>
+          
+          <p className="text-stone-400 text-xs uppercase tracking-widest">© 2026 {BUSINESS_INFO.name} - Sintra, Portugal</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
+
+
+==================================================
+ARQUIVO: src\components\admin\DashboardAppointments.tsx
+==================================================
+
+import React, { useEffect, useState } from 'react';
+import { db } from '../../firebase';
+import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { 
+  Calendar as CalendarIcon, Phone, Clock, Loader2, 
+  Plus, LayoutList, CalendarDays, Trash2 
+} from 'lucide-react';
+import { Appointment, TimeBlock } from '../../types';
+import AdminCalendar from '../AdminCalendar';
+import { CLIENT_ID } from '../../constants';
+
+interface DashboardAppointmentsProps {
+  onEditAppointment: (appt: Appointment) => void;
+  onNewBooking: () => void;
+}
+
+const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({ 
+  onEditAppointment, 
+  onNewBooking 
+}) => {
+  const [appointmentsMode, setAppointmentsMode] = useState<'calendar' | 'list'>('calendar');
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 1. Escutar Agendamentos
+    const qApp = query(
+      collection(db, "businesses", CLIENT_ID, "appointments"), 
+      where("date", ">=", today), 
+      orderBy("date", "asc")
+    );
+    const unsubApp = onSnapshot(qApp, (snap) => {
+      setAppointments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Appointment)));
+      setLoading(false);
+    });
+
+    // 2. Escutar Bloqueios
+    const unsubBlocks = onSnapshot(collection(db, "businesses", CLIENT_ID, "timeBlocks"), (snap) => {
+      setTimeBlocks(snap.docs.map(d => ({ id: d.id, ...d.data() } as TimeBlock)));
+    });
+
+    return () => { unsubApp(); unsubBlocks(); };
+  }, []);
+
+  const handleDeleteApp = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm("Eliminar esta marcação definitivamente?")) {
+      try {
+        await deleteDoc(doc(db, "businesses", CLIENT_ID, "appointments", id));
+      } catch (error) {
+        alert("Erro ao eliminar marcação.");
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-emerald-500">
+        <Loader2 className="animate-spin mb-4" size={40} />
+        <p className="text-stone-500 font-medium">A carregar agenda...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in duration-500 h-full flex flex-col">
+      {/* Cabeçalho da Aba */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <h3 className="text-white font-bold flex items-center gap-3 text-lg">
+          <CalendarIcon className="text-emerald-500" size={24}/> 
+          Agenda de Reservas
+        </h3>
+        
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <button 
+            onClick={onNewBooking}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+          >
+            <Plus size={16} /> NOVA MARCAÇÃO
+          </button>
+
+          <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
+            <button 
+              onClick={() => setAppointmentsMode('calendar')} 
+              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'calendar' ? 'bg-stone-800 text-emerald-500' : 'text-stone-600 hover:text-stone-400'}`}
+              title="Vista de Calendário"
+            >
+              <CalendarDays size={20}/>
+            </button>
+            <button 
+              onClick={() => setAppointmentsMode('list')} 
+              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'list' ? 'bg-stone-800 text-emerald-500' : 'text-stone-600 hover:text-stone-400'}`}
+              title="Vista de Lista"
+            >
+              <LayoutList size={20}/>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Conteúdo Dinâmico: Calendário ou Lista */}
+      {appointmentsMode === 'calendar' ? (
+        <AdminCalendar 
+          appointments={appointments} 
+          timeBlocks={timeBlocks} 
+          onEditAppointment={onEditAppointment} 
+        />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {appointments.length === 0 ? (
+            <div className="col-span-full bg-stone-900/50 border border-dashed border-white/10 rounded-[2.5rem] py-20 text-center">
+              <p className="text-stone-600 italic">Sem marcações registadas para os próximos dias.</p>
+            </div>
+          ) : (
+            appointments.map(app => (
+              <div 
+                key={app.id} 
+                onClick={() => onEditAppointment(app)}
+                className="bg-stone-900 border border-white/5 p-6 rounded-[2.5rem] relative group shadow-lg hover:border-emerald-500/30 transition-all cursor-pointer"
+              >
+                <span className="bg-emerald-600/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  {app.serviceName}
+                </span>
+                <div className="mt-4 text-white font-bold text-lg leading-tight">{app.clientName}</div>
+                <div className="text-stone-400 text-sm mt-2 font-medium">
+                  {new Date(app.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} • {app.startTime} - {app.endTime}
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                  <Phone size={14}/> {app.clientPhone}
+                </div>
+                <button 
+                  onClick={(e) => handleDeleteApp(e, app.id!)} 
+                  className="absolute top-6 right-6 text-stone-700 hover:text-red-500 transition-colors"
+                  title="Eliminar Marcação"
+                >
+                  <Trash2 size={18}/>
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DashboardAppointments;
+
+
+==================================================
+ARQUIVO: src\components\admin\DashboardDesign.tsx
+==================================================
+
+import React, { useState, useEffect } from 'react';
+import { db, storage } from '../../firebase';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { 
+  Instagram, Facebook, Music2, Camera, Link, Globe, 
+  AlertTriangle, Loader2, Save, Upload, CheckCircle2 
+} from 'lucide-react';
+import { CLIENT_ID } from '../../constants';
+import { SocialLinks } from '../../types';
+
+const DashboardDesign: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({
+    instagram: '', facebook: '', tiktok: '', whatsapp: ''
+  });
+  const [gallery, setGallery] = useState<string[]>(Array(8).fill(''));
+
+  // Carregar dados existentes
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "metadata"), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.socialLinks) setSocialLinks(data.socialLinks);
+        if (data.galleryUrls) setGallery(data.galleryUrls);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const handleSaveSocials = async () => {
+    setLoading(true);
+    try {
+      await setDoc(doc(db, "businesses", CLIENT_ID, "config", "metadata"), {
+        socialLinks,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      alert("Redes Sociais atualizadas!");
+    } catch (e) { alert("Erro ao salvar."); }
+    setLoading(false);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar formato (Aviso ao cliente)
+    if (!file.type.includes('webp')) {
+      alert("Por favor, use apenas imagens formato .webp para garantir a velocidade do site.");
+      return;
+    }
+
+    setUploadingIdx(index);
+    try {
+      // Caminho: businesses/la-barbiere-sintra/gallery/slot_0.webp
+      const storageRef = ref(storage, `businesses/${CLIENT_ID}/gallery/slot_${index}.webp`);
+      
+      // Fazer o upload
+      await uploadBytes(storageRef, file);
+      
+      // Obter o link público
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Atualizar o Firestore
+      const newGallery = [...gallery];
+      newGallery[index] = downloadURL;
+      
+      await setDoc(doc(db, "businesses", CLIENT_ID, "config", "metadata"), {
+        galleryUrls: newGallery,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      setGallery(newGallery);
+    } catch (error) {
+      console.error(error);
+      alert("Erro no upload.");
+    }
+    setUploadingIdx(null);
+  };
+
+  return (
+    <div className="space-y-8 animate-in slide-in-from-bottom-4">
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Redes Sociais */}
+        <div className="bg-stone-900 border border-emerald-900/20 p-8 rounded-[3rem] shadow-2xl space-y-6">
+          <h3 className="text-white font-bold flex items-center gap-3 text-lg">
+            <Globe className="text-emerald-500"/> Redes Sociais
+          </h3>
+          
+          <div className="space-y-4">
+            <div className="relative">
+              <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" size={18} />
+              <input 
+                placeholder="Link Instagram"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-emerald-500 transition-all"
+                value={socialLinks.instagram}
+                onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})}
+              />
+            </div>
+            <div className="relative">
+              <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" size={18} />
+              <input 
+                placeholder="Link Facebook"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-emerald-500 transition-all"
+                value={socialLinks.facebook}
+                onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})}
+              />
+            </div>
+            <div className="relative">
+              <Music2 className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" size={18} />
+              <input 
+                placeholder="Link TikTok"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-emerald-500 transition-all"
+                value={socialLinks.tiktok}
+                onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})}
+              />
+            </div>
+            <button 
+              onClick={handleSaveSocials}
+              disabled={loading}
+              className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl transition-all flex justify-center items-center gap-2"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : <><Save size={18}/> Salvar Redes Sociais</>}
+            </button>
+          </div>
+        </div>
+
+        {/* Info Box */}
+        <div className="bg-emerald-950/20 border border-emerald-500/20 p-8 rounded-[3rem] flex flex-col justify-center items-center text-center space-y-4">
+          <div className="w-16 h-16 bg-emerald-600/20 rounded-full flex items-center justify-center text-emerald-500">
+            <AlertTriangle size={32} />
+          </div>
+          <h4 className="text-white font-bold">Gestão de Imagens</h4>
+          <p className="text-stone-400 text-sm leading-relaxed">
+            Clique nos slots abaixo para selecionar fotos. As imagens devem ser <b>.webp</b>. 
+            O upload é feito automaticamente para a sua galeria.
+          </p>
+        </div>
+      </div>
+
+      {/* Galeria de Fotos Real */}
+      <div className="bg-stone-900 border border-emerald-900/20 p-8 rounded-[3rem] shadow-2xl">
+        <h3 className="text-white font-bold flex items-center gap-3 text-lg mb-8">
+          <Camera className="text-emerald-500"/> Galeria de Fotos (8 Slots)
+        </h3>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {gallery.map((url, idx) => (
+            <div key={idx} className="relative group">
+              <label className="cursor-pointer block">
+                <input 
+                  type="file" 
+                  accept="image/webp" 
+                  className="hidden" 
+                  onChange={(e) => handleFileUpload(e, idx)}
+                  disabled={uploadingIdx !== null}
+                />
+                <div className="aspect-[4/5] bg-stone-950 border border-dashed border-white/10 rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-2 hover:border-emerald-500/50 transition-all relative">
+                  {url ? (
+                    <>
+                      <img src={url} alt="Slot" className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                         <div className="bg-emerald-600 p-3 rounded-full text-white shadow-xl">
+                            <Upload size={20} />
+                         </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="text-stone-700" size={32} />
+                      <span className="text-[10px] font-bold text-stone-600 uppercase">Slot {idx + 1}</span>
+                    </>
+                  )}
+
+                  {/* Feedback de Upload */}
+                  {uploadingIdx === idx && (
+                    <div className="absolute inset-0 bg-stone-950/80 flex items-center justify-center">
+                      <Loader2 className="animate-spin text-emerald-500" size={32} />
+                    </div>
+                  )}
+                </div>
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardDesign;
+
+
+==================================================
+ARQUIVO: src\components\admin\DashboardServices.tsx
+==================================================
+
+import React, { useState, useEffect } from 'react';
+import { db } from '../../firebase';
+import { 
+  collection, query, orderBy, onSnapshot, 
+  deleteDoc, doc, addDoc, serverTimestamp 
+} from 'firebase/firestore';
+import { Plus, Briefcase, Trash2, Loader2 } from 'lucide-react';
+import { Service } from '../../types';
+import { CLIENT_ID } from '../../constants';
+
+const DashboardServices: React.FC = () => {
+  const [dbServices, setDbServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Estado para novo serviço
+  const [newService, setNewService] = useState({ 
+    name: '', 
+    description: '', 
+    price: '', 
+    duration: 30 
+  });
+
+  // Escutar Serviços do Firestore
+  useEffect(() => {
+    const q = query(
+      collection(db, "businesses", CLIENT_ID, "services"), 
+      orderBy("name", "asc")
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const servicesList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Service));
+      setDbServices(servicesList);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newService.name || !newService.price) return;
+
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, "businesses", CLIENT_ID, "services"), { 
+        ...newService, 
+        createdAt: serverTimestamp() 
+      });
+      // Resetar formulário
+      setNewService({ name: '', description: '', price: '', duration: 30 });
+    } catch (error) {
+      console.error("Erro ao criar serviço:", error);
+      alert("Erro ao criar serviço.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteService = async (id: string) => {
+    if (window.confirm("Deseja eliminar este serviço? Esta ação não pode ser desfeita.")) {
+      try {
+        await deleteDoc(doc(db, "businesses", CLIENT_ID, "services", id));
+      } catch (error) {
+        alert("Erro ao eliminar serviço.");
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Formulário de Criação */}
+      <form 
+        onSubmit={handleAddService} 
+        className="bg-stone-900 border border-emerald-900/20 p-8 rounded-[3rem] shadow-2xl space-y-6"
+      >
+        <h3 className="text-white font-bold flex items-center gap-2 text-lg">
+          <Plus className="text-emerald-500"/> Novo Serviço
+        </h3>
+        
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+             <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest">Nome do Serviço</label>
+             <input 
+                required 
+                value={newService.name} 
+                onChange={e => setNewService({...newService, name: e.target.value})} 
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 transition-all" 
+                placeholder="Ex: Corte Clássico"
+             />
+          </div>
+          <div className="space-y-2">
+             <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest">Preço</label>
+             <input 
+                required 
+                value={newService.price} 
+                onChange={e => setNewService({...newService, price: e.target.value})} 
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 transition-all" 
+                placeholder="Ex: 15€" 
+             />
+          </div>
+          <div className="space-y-2">
+             <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest">Duração (Mins)</label>
+             <input 
+                required 
+                type="number" 
+                value={newService.duration} 
+                onChange={e => setNewService({...newService, duration: parseInt(e.target.value)})} 
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 transition-all" 
+             />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+           <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest">Descrição (Opcional)</label>
+           <input 
+              value={newService.description} 
+              onChange={e => setNewService({...newService, description: e.target.value})} 
+              className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 transition-all" 
+              placeholder="Breve descrição do serviço..."
+           />
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98]"
+        >
+          {isSubmitting ? <Loader2 className="animate-spin" /> : "Criar Serviço"}
+        </button>
+      </form>
+
+      {/* Lista de Serviços Ativos */}
+      <div className="grid gap-4">
+        <h4 className="text-stone-500 text-[10px] font-black uppercase tracking-[0.3em] ml-6 mb-2">Serviços Ativos</h4>
+        
+        {loading ? (
+          <div className="py-10 flex justify-center">
+            <Loader2 className="animate-spin text-emerald-500" />
+          </div>
+        ) : dbServices.length === 0 ? (
+          <div className="bg-stone-900/50 border border-dashed border-white/10 rounded-3xl p-10 text-center">
+            <p className="text-stone-600 italic">Nenhum serviço cadastrado.</p>
+          </div>
+        ) : (
+          dbServices.map(s => (
+            <div 
+              key={s.id} 
+              className="bg-stone-900 border border-white/5 p-6 rounded-3xl flex justify-between items-center group transition-all hover:border-emerald-500/20 shadow-lg"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-stone-950 rounded-xl flex items-center justify-center text-emerald-500 shadow-inner">
+                  <Briefcase size={20}/>
+                </div>
+                <div>
+                  <h4 className="text-white font-bold">{s.name}</h4>
+                  <p className="text-stone-500 text-xs">
+                    {s.duration} min • <span className="text-emerald-500 font-bold">{s.price}</span>
+                  </p>
+                  {s.description && (
+                    <p className="text-stone-600 text-[10px] mt-1 italic">{s.description}</p>
+                  )}
+                </div>
+              </div>
+              <button 
+                onClick={() => handleDeleteService(s.id!)} 
+                className="text-stone-700 hover:text-red-500 p-3 transition-colors rounded-full hover:bg-red-500/5"
+                title="Remover Serviço"
+              >
+                <Trash2 size={20}/>
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DashboardServices;
+
+
+==================================================
+ARQUIVO: src\components\admin\DashboardSettings.tsx
+==================================================
+
+import React, { useState, useEffect } from 'react';
+import { db } from '../../firebase';
+import { 
+  collection, doc, onSnapshot, setDoc, 
+  addDoc, deleteDoc, serverTimestamp 
+} from 'firebase/firestore';
+import { 
+  Clock, Ban, Save, Repeat, Hash, Trash2, 
+  Loader2, Calendar, LayoutList, AlertCircle
+} from 'lucide-react';
+import { WorkConfig, TimeBlock } from '../../types';
+import { CLIENT_ID } from '../../constants';
+
+const DashboardSettings: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [isAddingBlock, setIsAddingBlock] = useState(false);
+
+  // --- ESTADO DA JORNADA ---
+  const [workConfig, setWorkConfig] = useState<WorkConfig>({
+    startHour: '09:00', 
+    endHour: '20:00', 
+    breakStart: '13:00', 
+    breakEnd: '14:00', 
+    daysOff: [0] // Domingo por padrão
+  });
+
+  // --- ESTADO DOS BLOQUEIOS ---
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
+  const [newBlock, setNewBlock] = useState<Partial<TimeBlock>>({
+    title: '', 
+    date: new Date().toISOString().split('T')[0], 
+    startTime: '11:00', 
+    endTime: '12:00', 
+    isRecurring: false, 
+    recurringType: 'weekly', 
+    repeatCount: 1 
+  });
+
+  // Auxiliar para gerar opções de horário
+  const hoursOptions = Array.from({ length: 48 }, (_, i) => {
+    const h = Math.floor(i / 2);
+    const m = i % 2 === 0 ? '00' : '30';
+    return `${h.toString().padStart(2, '0')}:${m}`;
+  });
+
+  useEffect(() => {
+    // 1. Escutar Configuração de Jornada
+    const unsubConfig = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "work-schedule"), (snap) => {
+      if (snap.exists()) {
+        setWorkConfig(snap.data() as WorkConfig);
+      }
+      setLoading(false);
+    });
+
+    // 2. Escutar Bloqueios Ativos
+    const unsubBlocks = onSnapshot(collection(db, "businesses", CLIENT_ID, "timeBlocks"), (snap) => {
+      setTimeBlocks(snap.docs.map(d => ({ id: d.id, ...d.data() } as TimeBlock)));
+    });
+
+    return () => { unsubConfig(); unsubBlocks(); };
+  }, []);
+
+  // --- AÇÕES ---
+  const handleSaveConfig = async () => {
+    setIsSavingConfig(true);
+    try {
+      await setDoc(doc(db, "businesses", CLIENT_ID, "config", "work-schedule"), {
+        ...workConfig,
+        updatedAt: serverTimestamp()
+      });
+      alert("Jornada de trabalho atualizada!");
+    } catch (e) {
+      alert("Erro ao salvar configuração.");
+    }
+    setIsSavingConfig(false);
+  };
+
+  const handleAddTimeBlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBlock.title) return;
+
+    setIsAddingBlock(true);
+    try {
+      await addDoc(collection(db, "businesses", CLIENT_ID, "timeBlocks"), {
+        ...newBlock,
+        createdAt: serverTimestamp()
+      });
+      // Resetar formulário de bloqueio
+      setNewBlock({ 
+        title: '', date: new Date().toISOString().split('T')[0], 
+        startTime: '11:00', endTime: '12:00', 
+        isRecurring: false, recurringType: 'weekly', repeatCount: 1 
+      });
+      alert("Horário bloqueado com sucesso.");
+    } catch (e) {
+      alert("Erro ao aplicar bloqueio.");
+    }
+    setIsAddingBlock(false);
+  };
+
+  const handleDeleteBlock = async (id: string) => {
+    if (window.confirm("Remover este bloqueio de agenda?")) {
+      await deleteDoc(doc(db, "businesses", CLIENT_ID, "timeBlocks", id));
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-emerald-500" /></div>;
+
+  return (
+    <div className="space-y-12 animate-in slide-in-from-bottom-4 pb-24">
+      
+      {/* SEÇÃO 1: JORNADA DE TRABALHO */}
+      <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-2xl">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-12 h-12 bg-emerald-600/20 rounded-2xl flex items-center justify-center text-emerald-500">
+            <Clock size={24} />
+          </div>
+          <div>
+            <h3 className="text-white font-bold text-lg">Jornada de Trabalho</h3>
+            <p className="text-stone-500 text-xs uppercase tracking-widest font-black">Horários de Funcionamento</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            { label: 'Abertura', key: 'startHour' },
+            { label: 'Encerramento', key: 'endHour' },
+            { label: 'Início Pausa', key: 'breakStart' },
+            { label: 'Fim Pausa', key: 'breakEnd' },
+          ].map((item) => (
+            <div key={item.key}>
+              <label className="text-[10px] text-stone-500 uppercase font-black mb-2 block ml-1">{item.label}</label>
+              <select 
+                value={(workConfig as any)[item.key]} 
+                onChange={e => setWorkConfig({...workConfig, [item.key]: e.target.value})}
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 appearance-none font-bold transition-all shadow-inner"
+              >
+                {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 pt-8 border-t border-white/5">
+          <h4 className="text-stone-400 text-sm font-bold mb-4 flex items-center gap-2">
+            <AlertCircle size={16} className="text-emerald-500" /> Dias de Encerramento:
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => (
+              <button 
+                key={day} 
+                onClick={() => {
+                  const newDays = workConfig.daysOff.includes(idx) 
+                    ? workConfig.daysOff.filter(d => d !== idx) 
+                    : [...workConfig.daysOff, idx];
+                  setWorkConfig({...workConfig, daysOff: newDays});
+                }} 
+                className={`px-5 py-3 rounded-xl text-xs font-black transition-all border ${
+                  workConfig.daysOff.includes(idx) 
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-900/20' 
+                  : 'bg-stone-950 border-white/5 text-stone-600 hover:text-stone-400'
+                }`}
+              >
+                {day.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button 
+          onClick={handleSaveConfig} 
+          disabled={isSavingConfig}
+          className="mt-10 flex items-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-5 rounded-2xl font-black shadow-xl shadow-emerald-900/30 transition-all active:scale-95 disabled:opacity-50"
+        >
+          {isSavingConfig ? <Loader2 className="animate-spin" /> : <Save size={20}/>}
+          Guardar Configuração
+        </button>
+      </div>
+
+      {/* SEÇÃO 2: BLOQUEIOS DE AGENDA */}
+      <div className="grid lg:grid-cols-2 gap-8">
+        
+        {/* Formulário de Bloqueio */}
+        <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-xl">
+           <h3 className="text-white font-bold mb-6 flex items-center gap-3 text-lg">
+             <Ban className="text-emerald-500"/> Bloquear Horário
+           </h3>
+           <form onSubmit={handleAddTimeBlock} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase text-stone-500 font-bold ml-1">Motivo do Bloqueio</label>
+                <input 
+                  required 
+                  placeholder="Ex: Consulta Médica, Almoço Externo..." 
+                  value={newBlock.title} 
+                  onChange={e => setNewBlock({...newBlock, title: e.target.value})} 
+                  className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 transition-all" 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase text-stone-500 font-bold ml-1">Data</label>
+                <input 
+                  required 
+                  type="date" 
+                  value={newBlock.date} 
+                  onChange={e => setNewBlock({...newBlock, date: e.target.value})} 
+                  className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-emerald-500 color-scheme-dark transition-all" 
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                   <label className="text-[10px] uppercase text-stone-500 font-bold ml-1">Desde as</label>
+                   <select value={newBlock.startTime} onChange={e => setNewBlock({...newBlock, startTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white font-bold outline-none focus:border-emerald-500 transition-all">
+                      {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
+                   </select>
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] uppercase text-stone-500 font-bold ml-1">Até às</label>
+                   <select value={newBlock.endTime} onChange={e => setNewBlock({...newBlock, endTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white font-bold outline-none focus:border-emerald-500 transition-all">
+                      {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
+                   </select>
+                </div>
+              </div>
+
+              {/* Recorrência */}
+              <div className="bg-stone-950 border border-white/5 p-5 rounded-2xl space-y-4 shadow-inner">
+                <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-3 text-stone-300 font-bold text-sm">
+                     <Repeat size={18} className="text-emerald-500"/> Tornar Recorrente
+                   </div>
+                   <input 
+                    type="checkbox" 
+                    checked={newBlock.isRecurring} 
+                    onChange={e => setNewBlock({...newBlock, isRecurring: e.target.checked})} 
+                    className="w-6 h-6 accent-emerald-500 cursor-pointer" 
+                   />
+                </div>
+                {newBlock.isRecurring && (
+                  <div className="space-y-4 animate-in slide-in-from-top-2">
+                     <div className="flex gap-2">
+                       {['daily', 'weekly', 'monthly'].map(type => (
+                         <button 
+                          key={type} 
+                          type="button" 
+                          onClick={() => setNewBlock({...newBlock, recurringType: type as any})} 
+                          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border transition-all ${
+                            newBlock.recurringType === type 
+                            ? 'bg-emerald-600 border-emerald-600 text-white' 
+                            : 'text-stone-500 border-white/5 hover:text-stone-300'
+                          }`}
+                         >
+                           {type === 'daily' ? 'Diário' : type === 'weekly' ? 'Semanal' : 'Mensual'}
+                         </button>
+                       ))}
+                     </div>
+                     <div className="flex items-center justify-between bg-stone-900 p-4 rounded-2xl border border-white/5">
+                        <span className="text-stone-400 font-bold text-xs flex items-center gap-2">
+                          <Hash size={16} className="text-emerald-500"/> Repetir quantas vezes?
+                        </span>
+                        <input 
+                          type="number" min="1" max="52" 
+                          value={newBlock.repeatCount} 
+                          onChange={e => setNewBlock({...newBlock, repeatCount: parseInt(e.target.value)})} 
+                          className="w-16 bg-stone-950 border border-white/5 rounded-lg p-2 text-white text-center font-black outline-none focus:border-emerald-500" 
+                        />
+                     </div>
+                  </div>
+                )}
+              </div>
+              <button 
+                type="submit" 
+                disabled={isAddingBlock}
+                className="w-full py-5 bg-white text-stone-950 font-black rounded-2xl shadow-xl active:scale-95 transition-all hover:bg-emerald-50"
+              >
+                {isAddingBlock ? <Loader2 className="animate-spin" /> : "Aplicar Bloqueio"}
+              </button>
+           </form>
+        </div>
+
+        {/* Lista de Bloqueios */}
+        <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-xl flex flex-col">
+           <h3 className="text-white font-bold mb-6 flex items-center gap-3 text-lg">
+             <LayoutList className="text-emerald-500"/> Bloqueios Ativos
+           </h3>
+           <div className="space-y-3 overflow-y-auto max-h-[550px] pr-2 scrollbar-thin scrollbar-thumb-stone-800 text-left">
+              {timeBlocks.length === 0 ? (
+                <div className="text-center py-10 text-stone-600 italic">Sem bloqueios ativos na agenda.</div>
+              ) : (
+                timeBlocks.map(block => (
+                  <div key={block.id} className="bg-stone-950 border border-white/5 p-5 rounded-2xl flex justify-between items-center animate-in zoom-in-95 hover:border-emerald-900/20 transition-all shadow-md">
+                     <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-stone-200 font-bold text-sm">{block.title}</h4>
+                          {block.isRecurring && <Repeat size={12} className="text-emerald-500"/>}
+                        </div>
+                        <p className="text-stone-500 text-[10px] uppercase font-black tracking-widest">
+                          {block.date} • {block.startTime}-{block.endTime}
+                        </p>
+                        {block.isRecurring && (
+                          <p className="text-emerald-600/60 text-[9px] font-black uppercase mt-1">
+                            {block.recurringType} ({block.repeatCount}x)
+                          </p>
+                        )}
+                     </div>
+                     <button 
+                      onClick={() => handleDeleteBlock(block.id!)} 
+                      className="text-stone-800 hover:text-red-500 p-2 transition-colors rounded-full"
+                      title="Remover Bloqueio"
+                     >
+                       <Trash2 size={18}/>
+                     </button>
+                  </div>
+                ))
+              )}
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardSettings;
+
+
+==================================================
+ARQUIVO: src\components\AdminBookingModal.tsx
+==================================================
+
+import React, { useState, useEffect } from 'react';
+import { 
+  X, 
+  Calendar, 
+  Clock, 
+  User, 
+  Phone, 
+  Scissors, 
+  Loader2, 
+  Save, 
+  Trash2, 
+  Plus // Ícone que estava faltando
+} from 'lucide-react';
+import { db } from '../firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { CLIENT_ID } from '../constants';
+import { Service, Appointment } from '../types';
+
+interface AdminBookingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  services: Service[];
+  initialData?: Appointment | null;
+}
+
+const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, services, initialData }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    clientName: '',
+    clientPhone: '',
+    serviceId: '',
+    date: new Date().toISOString().split('T')[0],
+    startTime: '11:00'
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        clientName: initialData.clientName,
+        clientPhone: initialData.clientPhone,
+        serviceId: initialData.serviceId,
+        date: initialData.date,
+        startTime: initialData.startTime
+      });
+    } else {
+      setFormData({
+        clientName: '',
+        clientPhone: '',
+        serviceId: '',
+        date: new Date().toISOString().split('T')[0],
+        startTime: '11:00'
+      });
+    }
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  const timeOptions = Array.from({ length: 53 }, (_, i) => {
+    const totalMinutes = 8 * 60 + i * 15;
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  });
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const selectedService = services.find(s => s.id === formData.serviceId);
+    if (!selectedService) return;
+
+    try {
+      const [h, m] = formData.startTime.split(':').map(Number);
+      const startInMinutes = h * 60 + m;
+      const endInMinutes = startInMinutes + selectedService.duration;
+      const endTime = `${Math.floor(endInMinutes / 60).toString().padStart(2, '0')}:${(endInMinutes % 60).toString().padStart(2, '0')}`;
+
+      const appointmentData = {
+        clientName: formData.clientName,
+        clientPhone: formData.clientPhone,
+        serviceId: selectedService.id,
+        serviceName: selectedService.name,
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: endTime,
+        updatedAt: serverTimestamp()
+      };
+
+      if (initialData?.id) {
+        const docRef = doc(db, "businesses", CLIENT_ID, "appointments", initialData.id);
+        await updateDoc(docRef, appointmentData);
+      } else {
+        await addDoc(collection(db, "businesses", CLIENT_ID, "appointments"), {
+          ...appointmentData,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao processar a operação.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!initialData?.id) return;
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este agendamiento?")) return;
+
+    setLoading(true);
+    try {
+      await deleteDoc(doc(db, "businesses", CLIENT_ID, "appointments", initialData.id));
+      onClose();
+    } catch (error) {
+      console.error("Erro ao deletar:", error);
+      alert("Erro ao eliminar.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="relative bg-stone-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        
+        {/* Header */}
+        <div className="p-6 border-b border-white/5 bg-stone-900/50 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 ${initialData ? 'bg-amber-500' : 'bg-rose-600'} rounded-xl flex items-center justify-center text-white transition-colors`}>
+              {initialData ? <Calendar size={20} /> : <Plus size={20} />}
+            </div>
+            <div>
+              <h2 className="text-white font-bold text-lg">
+                {initialData ? 'Detalles de la Cita' : 'Nueva Marcação Manual'}
+              </h2>
+              <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest">
+                {initialData ? 'Editar Agendamiento' : 'Painel de Gestão'}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-stone-500 transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSave} className="p-8 space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
+                <User size={12} /> Cliente
+              </label>
+              <input 
+                required
+                type="text"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all"
+                value={formData.clientName}
+                onChange={e => setFormData({...formData, clientName: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
+                <Phone size={12} /> Telemóvel
+              </label>
+              <input 
+                required
+                type="tel"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all"
+                value={formData.clientPhone}
+                onChange={e => setFormData({...formData, clientPhone: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
+              <Scissors size={12} /> Serviço
+            </label>
+            <select 
+              required
+              className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all appearance-none"
+              value={formData.serviceId}
+              onChange={e => setFormData({...formData, serviceId: e.target.value})}
+            >
+              <option value="">Selecione um serviço...</option>
+              {services.map(s => (
+                <option key={s.id} value={s.id}>{s.name} ({s.duration} min - {s.price})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
+                <Calendar size={12} /> Data
+              </label>
+              <input 
+                required
+                type="date"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all color-scheme-dark"
+                value={formData.date}
+                onChange={e => setFormData({...formData, date: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
+                <Clock size={12} /> Início
+              </label>
+              <select 
+                required
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all appearance-none"
+                value={formData.startTime}
+                onChange={e => setFormData({...formData, startTime: e.target.value})}
+              >
+                {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            {initialData && (
+              <button 
+                type="button"
+                onClick={handleDelete}
+                disabled={loading}
+                className="flex-none p-5 bg-stone-800 hover:bg-red-900/40 text-red-500 rounded-2xl transition-all active:scale-95"
+                title="Eliminar agendamiento"
+              >
+                <Trash2 size={20} />
+              </button>
+            )}
+            
+            <button 
+              type="submit"
+              disabled={loading}
+              className={`flex-1 py-5 ${initialData ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'} text-white font-black rounded-2xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98]`}
+            >
+              {loading ? <Loader2 className="animate-spin" /> : (
+                <><Save size={20} /> {initialData ? 'Actualizar Cita' : 'Confirmar Agendamento'}</>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default AdminBookingModal;
+
+
+==================================================
+ARQUIVO: src\components\AdminCalendar.tsx
+==================================================
+
+import React, { useState } from 'react';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Clock, 
+  User, 
+  Scissors, 
+  Lock, 
+  Calendar as CalendarIcon 
+} from 'lucide-react';
+import { Appointment, TimeBlock } from '../types';
+
+interface AdminCalendarProps {
+  appointments: Appointment[];
+  timeBlocks: TimeBlock[];
+  onEditAppointment: (appt: Appointment) => void;
+}
+
+const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, onEditAppointment }) => {
+  const [viewDate, setViewDate] = useState(new Date());
+
+  // --- CONFIGURAÇÃO DA GRADE ---
+  const HOUR_HEIGHT = 80; // pixels por hora
+  const START_HOUR = 8;   // 08:00
+  const END_HOUR = 21;    // 21:00
+  const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
+
+  // --- LÓGICA DE DATAS (SEMANA) ---
+  const getWeekDays = (date: Date) => {
+    const start = new Date(date);
+    const day = start.getDay();
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Segunda como primeiro dia
+    start.setDate(diff);
+    
+    return Array.from({ length: 6 }, (_, i) => { // Segunda a Sábado
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  };
+
+  const weekDays = getWeekDays(viewDate);
+  const weekRangeLabel = `${weekDays[0].toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} - ${weekDays[5].toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+
+  const changeWeek = (offset: number) => {
+    const next = new Date(viewDate);
+    next.setDate(viewDate.getDate() + (offset * 7));
+    setViewDate(next);
+  };
+
+  // --- AUXILIARES DE POSICIONAMENTO ---
+  const getTimeData = (timeStr: string) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    const totalMinutes = (h * 60 + m) - (START_HOUR * 60);
+    return {
+      top: (totalMinutes / 60) * HOUR_HEIGHT,
+      minutes: totalMinutes
+    };
+  };
+
+  const calculateHeight = (start: string, end: string) => {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const duration = (eh * 60 + em) - (sh * 60 + sm);
+    return (duration / 60) * HOUR_HEIGHT;
+  };
+
+  // --- VERIFICAÇÃO DE BLOQUEIOS RECORRENTES ---
+  const isBlockActiveOnDay = (block: TimeBlock, targetDate: Date) => {
+    const blockDate = new Date(block.date);
+    blockDate.setHours(0,0,0,0);
+    const target = new Date(targetDate);
+    target.setHours(0,0,0,0);
+
+    if (target.getTime() === blockDate.getTime()) return true;
+    if (!block.isRecurring || target < blockDate) return false;
+
+    const diffDays = Math.round((target.getTime() - blockDate.getTime()) / (1000 * 60 * 60 * 24));
+    const repeats = block.repeatCount || 0;
+
+    switch (block.recurringType) {
+      case 'daily':
+        return diffDays <= repeats;
+      case 'weekly':
+        return diffDays % 7 === 0 && diffDays / 7 <= repeats;
+      case 'monthly':
+        return target.getDate() === blockDate.getDate() && 
+               (target.getMonth() - blockDate.getMonth() + (12 * (target.getFullYear() - blockDate.getFullYear()))) <= repeats;
+      default:
+        return false;
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full animate-in fade-in duration-700">
+      
+      {/* CABEÇALHO DA AGENDA */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div className="flex items-center gap-4">
+          <div className="bg-emerald-600 p-2 rounded-xl shadow-lg shadow-emerald-900/20">
+            <CalendarIcon className="text-white" size={20} />
+          </div>
+          <div>
+            <h3 className="text-white font-bold text-lg leading-tight">Vista Semanal</h3>
+            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">{weekRangeLabel}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center bg-stone-900 border border-white/5 p-1 rounded-2xl">
+          <button onClick={() => changeWeek(-1)} className="p-2 hover:bg-stone-800 rounded-xl text-stone-400 hover:text-white transition-all">
+            <ChevronLeft size={20}/>
+          </button>
+          <button 
+            onClick={() => setViewDate(new Date())} 
+            className="px-4 py-2 text-xs font-bold text-stone-300 hover:text-emerald-500 transition-colors"
+          >
+            HOJE
+          </button>
+          <button onClick={() => changeWeek(1)} className="p-2 hover:bg-stone-800 rounded-xl text-stone-400 hover:text-white transition-all">
+            <ChevronRight size={20}/>
+          </button>
+        </div>
+      </div>
+
+      {/* ÁREA DA GRADE */}
+      <div className="flex-1 overflow-x-auto rounded-[2rem] border border-white/5 bg-stone-950/50 shadow-2xl">
+        <div className="min-w-[800px] relative">
+          
+          {/* DIAS DA SEMANA */}
+          <div className="sticky top-0 z-30 grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr] bg-stone-900 border-b border-white/5">
+            <div className="p-4 border-r border-white/5"></div>
+            {weekDays.map((day, i) => {
+              const isToday = day.toDateString() === new Date().toDateString();
+              return (
+                <div key={i} className={`p-3 text-center border-r border-white/5 last:border-0 ${isToday ? 'bg-emerald-600/5' : ''}`}>
+                  <p className="text-[10px] font-black text-stone-500 uppercase tracking-tighter">
+                    {day.toLocaleDateString('pt-PT', { weekday: 'short' })}
+                  </p>
+                  <p className={`text-lg font-serif font-bold ${isToday ? 'text-emerald-500' : 'text-white'}`}>
+                    {day.getDate()}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* CORPO DA GRADE */}
+          <div className="relative grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr]">
+            
+            {/* HORAS LATERAIS */}
+            <div className="bg-stone-900/30 border-r border-white/5">
+              {hours.map(hour => (
+                <div 
+                  key={hour} 
+                  className="text-right pr-4 text-[10px] font-bold text-stone-600 border-b border-white/5"
+                  style={{ height: `${HOUR_HEIGHT}px`, paddingTop: '4px' }}
+                >
+                  {hour.toString().padStart(2, '0')}:00
+                </div>
+              ))}
+            </div>
+
+            {/* COLUNAS DOS DIAS */}
+            {weekDays.map((day, colIdx) => {
+              const dateStr = day.toISOString().split('T')[0];
+              const dayAppointments = appointments.filter(a => a.date === dateStr);
+              const dayBlocks = timeBlocks.filter(b => isBlockActiveOnDay(b, day));
+
+              return (
+                <div key={colIdx} className="relative border-r border-white/5 last:border-0 pointer-events-auto">
+                  {/* Linhas de fundo */}
+                  {hours.map(h => (
+                    <div key={h} className="border-b border-white/[0.02]" style={{ height: `${HOUR_HEIGHT}px` }} />
+                  ))}
+
+                  {/* BLOQUEIOS (BACKGROUND) */}
+                  {dayBlocks.map(block => {
+                    const { top } = getTimeData(block.startTime);
+                    const height = calculateHeight(block.startTime, block.endTime);
+                    return (
+                      <div
+                        key={block.id}
+                        className="absolute left-0 right-0 z-10 bg-stone-800/40 backdrop-blur-[1px] border-y border-white/5 flex items-center justify-center overflow-hidden pointer-events-none"
+                        style={{ top: `${top}px`, height: `${height}px` }}
+                      >
+                        <div className="flex items-center gap-1.5 opacity-20 rotate-[-5deg]">
+                          <Lock size={12} className="text-white" />
+                          <span className="text-[9px] font-black text-white uppercase tracking-tighter">Bloqueado</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* AGENDAMENTOS (FOREGROUND - CLICÁVEIS) */}
+                  {dayAppointments.map(app => {
+                    const { top } = getTimeData(app.startTime);
+                    const height = calculateHeight(app.startTime, app.endTime);
+                    return (
+                      <div
+                        key={app.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation(); 
+                          onEditAppointment(app);
+                        }}
+                        className="absolute left-1.5 right-1.5 z-40 rounded-xl bg-stone-900 border-l-4 border-emerald-600 p-2 shadow-2xl ring-1 ring-white/5 hover:ring-emerald-500/50 hover:bg-stone-800 hover:scale-[1.02] hover:z-50 transition-all cursor-pointer group/card select-none"
+                        style={{ top: `${top}px`, height: `${height}px` }}
+                      >
+                        <div className="flex flex-col h-full overflow-hidden pointer-events-none">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[9px] font-black text-emerald-500 uppercase leading-none truncate pr-1">
+                              {app.startTime}
+                            </span>
+                            <Scissors size={10} className="text-stone-700 group-hover/card:text-emerald-500 transition-colors shrink-0" />
+                          </div>
+                          <p className="text-xs font-bold text-white truncate leading-tight group-hover/card:text-emerald-100 transition-colors">
+                            {app.clientName}
+                          </p>
+                          {height > 45 && (
+                            <p className="text-[10px] text-stone-500 font-medium truncate mt-0.5">
+                              {app.serviceName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* LEGENDA */}
+      <div className="mt-4 flex gap-4 px-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-600 shadow-sm shadow-emerald-900/40"></div>
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Marcações (Clica para editar)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-stone-800 border border-white/5"></div>
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Bloqueios</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminCalendar;
+
+
+==================================================
+ARQUIVO: src\components\AdminDashboard.tsx
+==================================================
+
+import React, { useState, useEffect } from 'react';
+import { auth, db } from '../firebase';
+import { onSnapshot, query, collection, orderBy } from 'firebase/firestore';
+import { 
+  LogOut, Scissors, LayoutDashboard, Settings, 
+  Briefcase, Palette, Loader2 
+} from 'lucide-react';
+import { Appointment, Service } from '../types';
+import { BUSINESS_INFO, CLIENT_ID } from '../constants';
+
+// Sub-componentes (Vamos criar a seguir)
+import DashboardAppointments from './admin/DashboardAppointments';
+import DashboardServices from './admin/DashboardServices';
+import DashboardDesign from './admin/DashboardDesign';
+import DashboardSettings from './admin/DashboardSettings';
+import AdminBookingModal from './AdminBookingModal';
+
+interface AdminDashboardProps {
+  onLogout: () => void;
+}
+
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
+  // --- NAVEGAÇÃO ---
+  const [activeTab, setActiveTab] = useState<'appointments' | 'services' | 'visual' | 'settings'>('appointments');
+  
+  // --- ESTADOS COMPARTILHADOS PARA O MODAL ---
+  const [isAdminBookingOpen, setIsAdminBookingOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [dbServices, setDbServices] = useState<Service[]>([]);
+
+  // Carregar serviços apenas uma vez no pai para compartilhar com o modal
+  useEffect(() => {
+    const q = query(collection(db, "businesses", CLIENT_ID, "services"), orderBy("name", "asc"));
+    const unsub = onSnapshot(q, (snap) => {
+      setDbServices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Service)));
+    });
+    return () => unsub();
+  }, []);
+
+  const handleSignOut = async () => {
+    if (window.confirm("Deseja sair do sistema?")) {
+      await auth.signOut();
+      onLogout();
+    }
+  };
+
+  const handleEditAppointment = (appt: Appointment) => {
+    setSelectedAppointment(appt);
+    setIsAdminBookingOpen(true);
+  };
+
+  const handleNewBooking = () => {
+    setSelectedAppointment(null);
+    setIsAdminBookingOpen(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] bg-stone-950 flex flex-col text-left overflow-hidden font-sans">
+      
+      {/* HEADER SLIM */}
+      <header className="bg-stone-900 border-b border-emerald-900/20 p-6 z-30 shadow-2xl">
+        <div className="container mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+              <Scissors size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-serif font-bold text-white uppercase tracking-tight">{BUSINESS_INFO.name}</h2>
+              <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest leading-none mt-1">Gestão WaaS</p>
+            </div>
+          </div>
+
+          <nav className="flex bg-stone-800/40 p-1 rounded-2xl border border-white/5 overflow-x-auto max-w-full no-scrollbar">
+            <TabButton 
+              active={activeTab === 'appointments'} 
+              onClick={() => setActiveTab('appointments')} 
+              icon={<LayoutDashboard size={16} />} 
+              label="MARCAÇÕES" 
+            />
+            <TabButton 
+              active={activeTab === 'services'} 
+              onClick={() => setActiveTab('services')} 
+              icon={<Briefcase size={16} />} 
+              label="SERVIÇOS" 
+            />
+            <TabButton 
+              active={activeTab === 'visual'} 
+              onClick={() => setActiveTab('visual')} 
+              icon={<Palette size={16} />} 
+              label="DESIGN" 
+            />
+            <TabButton 
+              active={activeTab === 'settings'} 
+              onClick={() => setActiveTab('settings')} 
+              icon={<Settings size={16} />} 
+              label="CONFIG" 
+            />
+          </nav>
+          
+          <button onClick={handleSignOut} className="text-stone-500 hover:text-red-500 transition-colors flex items-center gap-2 font-bold text-sm">
+            <LogOut size={18} /> <span className="hidden sm:inline">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      {/* CONTEÚDO DINÂMICO */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-stone-950">
+        <div className="container mx-auto max-w-6xl h-full">
+          {activeTab === 'appointments' && (
+            <DashboardAppointments 
+              onEditAppointment={handleEditAppointment} 
+              onNewBooking={handleNewBooking}
+            />
+          )}
+          
+          {activeTab === 'services' && (
+            <DashboardServices />
+          )}
+
+          {activeTab === 'visual' && (
+            <DashboardDesign />
+          )}
+
+          {activeTab === 'settings' && (
+            <DashboardSettings />
+          )}
+        </div>
+      </main>
+
+      <footer className="p-4 text-center text-stone-800 text-[10px] uppercase font-bold tracking-[0.4em] bg-stone-950 border-t border-white/5">
+        Powered by Allan Dev • SaaS Multi-tenant
+      </footer>
+
+      {/* MODAL ÚNICO GERENCIADO PELO PAI */}
+      <AdminBookingModal 
+        isOpen={isAdminBookingOpen} 
+        onClose={() => setIsAdminBookingOpen(false)} 
+        services={dbServices} 
+        initialData={selectedAppointment}
+      />
+    </div>
+  );
+};
+
+// Componente auxiliar para os botões da Tab
+const TabButton = ({ active, onClick, icon, label }: any) => (
+  <button 
+    onClick={onClick} 
+    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+      active ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-400 hover:text-stone-200'
+    }`}
+  >
+    {icon} {label}
+  </button>
+);
+
+export default AdminDashboard;
+
+
+==================================================
+ARQUIVO: src\components\AdminLogin.tsx
+==================================================
+
+import React, { useState } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
+import { Lock, Mail, X, Loader2, Scissors } from 'lucide-react';
+import { BUSINESS_INFO } from '../constants';
+
+interface AdminLoginProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onLoginSuccess: () => void;
+}
+
+const AdminLogin: React.FC<AdminLoginProps> = ({ isOpen, onClose, onLoginSuccess }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      onLoginSuccess();
+      onClose();
+    } catch (err: any) {
+      setError('Credenciais incorretas. Por favor, tente novamente.');
+      console.error(err);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
+      
+      <div className="relative bg-stone-900 border border-emerald-900/30 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-300">
+        <button onClick={onClose} className="absolute top-6 right-6 text-stone-500 hover:text-white">
+          <X size={24} />
+        </button>
+
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-emerald-900/40">
+            <Scissors size={32} />
+          </div>
+          <h2 className="text-2xl font-serif text-white font-bold uppercase tracking-tight">Acesso de Gestão</h2>
+          <p className="text-emerald-500 text-xs mt-2 font-bold uppercase tracking-widest">{BUSINESS_INFO.name} {BUSINESS_INFO.subName}</p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-4 rounded-xl text-center font-bold">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" size={18} />
+              <input 
+                type="email" 
+                placeholder="Email do administrador"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-emerald-500/50 transition-all font-medium"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" size={18} />
+              <input 
+                type="password" 
+                placeholder="Palavra-passe"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-emerald-500/50 transition-all font-medium"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-emerald-900/20 flex justify-center items-center gap-2 uppercase tracking-widest active:scale-[0.98]"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : "Entrar no Painel"}
+          </button>
+        </form>
+
+        <p className="text-center text-stone-600 text-[10px] mt-8 uppercase tracking-[0.4em] font-bold">
+          Sistema de Gestão Allan Dev v2.0
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default AdminLogin;
+
+
+==================================================
+ARQUIVO: src\components\BookingModal.tsx
+==================================================
+
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Clock, User, Phone, CheckCircle2, ChevronRight, ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
+import { Service, Appointment, WorkConfig, TimeBlock } from '../types';
+// Importação da conexão e das constantes multi-tenant
+import { db } from '../firebase';
+import { collection, addDoc, query, where, getDocs, orderBy, onSnapshot, serverTimestamp, doc } from 'firebase/firestore';
+import { CLIENT_ID, BUSINESS_INFO } from '../constants';
+
+interface BookingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
+  // --- ESTADOS DE UI ---
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // --- ESTADOS DE DADOS ---
+  const [dbServices, setDbServices] = useState<Service[]>([]);
+  const [workConfig, setWorkConfig] = useState<WorkConfig | null>(null);
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
+  const [occupiedSlots, setOccupiedSlots] = useState<{start: number, end: number}[]>([]);
+  
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [formData, setFormData] = useState({ name: '', phone: '' });
+
+  // 1. Resetar ao fechar
+  useEffect(() => {
+    if (!isOpen) {
+      setStep(1); setSelectedService(null); setSelectedDate("");
+      setSelectedTime(""); setFormData({ name: '', phone: '' });
+    }
+  }, [isOpen]);
+
+  // 2. Escutar Dados Globais (Multi-tenant path fix)
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingData(true);
+      
+      // Escutar Serviços do Cliente específico
+      const unsubServ = onSnapshot(query(collection(db, "businesses", CLIENT_ID, "services"), orderBy("name", "asc")), (snap) => {
+        setDbServices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Service)));
+      });
+
+      // Escutar Horário de Trabalho do Cliente específico
+      const unsubConfig = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "work-schedule"), (snap) => {
+        if (snap.exists()) setWorkConfig(snap.data() as WorkConfig);
+      });
+
+      // Escutar Bloqueios Manuais do Cliente específico
+      const unsubBlocks = onSnapshot(collection(db, "businesses", CLIENT_ID, "timeBlocks"), (snap) => {
+        setTimeBlocks(snap.docs.map(d => ({ id: d.id, ...d.data() } as TimeBlock)));
+      });
+
+      setLoadingData(false);
+      return () => { unsubServ(); unsubConfig(); unsubBlocks(); };
+    }
+  }, [isOpen]);
+
+  // 3. Buscar Agendamentos Ocupados (Multi-tenant path fix)
+  useEffect(() => {
+    if (selectedDate && isOpen) {
+      const fetchBookings = async () => {
+        setLoading(true);
+        try {
+          const q = query(collection(db, "businesses", CLIENT_ID, "appointments"), where("date", "==", selectedDate));
+          const snapshot = await getDocs(q);
+          const busy = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const [sh, sm] = data.startTime.split(':').map(Number);
+            const [eh, em] = data.endTime.split(':').map(Number);
+            return { start: sh * 60 + sm, end: eh * 60 + em };
+          });
+          setOccupiedSlots(busy);
+        } catch (e) { console.error(e); }
+        setLoading(false);
+      };
+      fetchBookings();
+    }
+  }, [selectedDate, isOpen]);
+
+  if (!isOpen) return null;
+
+  // --- MOTOR LÓGICO DE FILTRAGEM ---
+  const generateAvailableTimes = () => {
+    if (!workConfig || !selectedService) return [];
+    
+    const slots = [];
+    const [startH, startM] = workConfig.startHour.split(':').map(Number);
+    const [endH, endM] = workConfig.endHour.split(':').map(Number);
+    
+    let currentMin = startH * 60 + startM;
+    const dayEndMin = endH * 60 + endM;
+    const interval = 30;
+
+    const breakStart = workConfig.breakStart ? workConfig.breakStart.split(':').map(Number).reduce((h, m) => h * 60 + m) : null;
+    const breakEnd = workConfig.breakEnd ? workConfig.breakEnd.split(':').map(Number).reduce((h, m) => h * 60 + m) : null;
+
+    const selectedDayObj = new Date(selectedDate);
+
+    while (currentMin + selectedService.duration <= dayEndMin) {
+      const slotEnd = currentMin + selectedService.duration;
+      const timeStr = `${Math.floor(currentMin/60).toString().padStart(2,'0')}:${(currentMin%60).toString().padStart(2,'0')}`;
+
+      let isBlocked = false;
+
+      if (breakStart !== null && breakEnd !== null) {
+        if (currentMin < breakEnd && slotEnd > breakStart) isBlocked = true;
+      }
+
+      if (!isBlocked) {
+        isBlocked = occupiedSlots.some(busy => currentMin < busy.end && slotEnd > busy.start);
+      }
+
+      if (!isBlocked) {
+        isBlocked = timeBlocks.some(block => {
+          const [bsh, bsm] = block.startTime.split(':').map(Number);
+          const [beh, bem] = block.endTime.split(':').map(Number);
+          const bStart = bsh * 60 + bsm;
+          const bEnd = beh * 60 + bem;
+          const blockStartDate = new Date(block.date);
+          const diffTime = selectedDayObj.getTime() - blockStartDate.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (block.date === selectedDate) return currentMin < bEnd && slotEnd > bStart;
+
+          if (block.isRecurring && diffDays > 0) {
+            const repeats = block.repeatCount || 1;
+            if (block.recurringType === 'daily' && diffDays < repeats) return currentMin < bEnd && slotEnd > bStart;
+            if (block.recurringType === 'weekly' && diffDays % 7 === 0 && (diffDays / 7) < repeats) return currentMin < bEnd && slotEnd > bStart;
+            if (block.recurringType === 'monthly') {
+               const monthDiff = (selectedDayObj.getFullYear() - blockStartDate.getFullYear()) * 12 + (selectedDayObj.getMonth() - blockStartDate.getMonth());
+               if (selectedDayObj.getDate() === blockStartDate.getDate() && monthDiff > 0 && monthDiff < repeats) return currentMin < bEnd && slotEnd > bStart;
+            }
+          }
+          return false;
+        });
+      }
+
+      if (!isBlocked) slots.push(timeStr);
+      currentMin += interval;
+    }
+    return slots;
+  };
+
+  const getNextDays = () => {
+    const days = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const dayOfWeek = d.getDay();
+      if (workConfig && !workConfig.daysOff.includes(dayOfWeek)) {
+        days.push(d.toISOString().split('T')[0]);
+      }
+    }
+    return days;
+  };
+
+  const handleBooking = async () => {
+    if (!selectedService || !selectedDate || !selectedTime) return;
+    setLoading(true);
+    try {
+      const [h, m] = selectedTime.split(':').map(Number);
+      const endTotal = (h * 60) + m + selectedService.duration;
+      const endTimeStr = `${Math.floor(endTotal/60).toString().padStart(2,'0')}:${(endTotal%60).toString().padStart(2,'0')}`;
+
+      await addDoc(collection(db, "businesses", CLIENT_ID, "appointments"), {
+        serviceId: selectedService.id,
+        serviceName: selectedService.name,
+        clientName: formData.name,
+        clientPhone: formData.phone,
+        date: selectedDate,
+        startTime: selectedTime,
+        endTime: endTimeStr,
+        createdAt: serverTimestamp()
+      });
+      setStep(5);
+    } catch (e) { alert("Erro ao reservar."); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 text-left">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+      
+      <div className="relative bg-stone-900 border border-emerald-900/30 w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-300">
+        
+        {/* Header */}
+        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-stone-900/50">
+          <div>
+            <h2 className="text-xl font-bold text-white font-serif tracking-tight">Marcar Serviço</h2>
+            <p className="text-emerald-500 text-xs uppercase tracking-widest font-bold">{BUSINESS_INFO.name} {BUSINESS_INFO.subName}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-stone-400 hover:text-white transition-colors"><X size={24} /></button>
+        </div>
+
+        <div className="p-6 max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-800">
+          
+          {/* STEP 1: Serviços */}
+          {step === 1 && (
+            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+              <p className="text-stone-400 text-sm mb-4">Que serviço desejas hoje?</p>
+              
+              {loadingData ? (
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>
+              ) : dbServices.length === 0 ? (
+                <p className="text-stone-500 italic text-center py-10">Não há serviços disponíveis.</p>
+              ) : (
+                dbServices.map((s) => (
+                  <button key={s.id} onClick={() => { setSelectedService(s); setStep(2); }} className="w-full flex justify-between items-center p-4 rounded-2xl bg-stone-950 border border-white/5 hover:border-emerald-500/50 group transition-all text-left">
+                    <div className="flex-1 pr-4">
+                      <h3 className="text-white font-bold group-hover:text-emerald-500 transition-colors">{s.name}</h3>
+                      <div className="flex items-center gap-3 mt-1 text-stone-500 text-xs font-medium">
+                        <Clock size={12}/> {s.duration} min | <span className="text-emerald-600 font-bold">{s.price}</span>
+                      </div>
+                    </div>
+                    <ChevronRight size={20} className="text-stone-700 group-hover:text-emerald-500 transition-all" />
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* STEP 2: Data */}
+          {step === 2 && (
+            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+              <button onClick={() => setStep(1)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-emerald-500 transition-colors"><ChevronLeft size={14}/> Voltar aos serviços</button>
+              <h3 className="text-white font-bold flex items-center gap-2"><Calendar size={18} className="text-emerald-500"/> Escolha um dia</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {getNextDays().map((d) => (
+                  <button key={d} onClick={() => { setSelectedDate(d); setStep(3); }} className={`p-3 rounded-2xl border transition-all text-center ${selectedDate === d ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-900/20' : 'bg-stone-950 border-white/5 text-stone-400 hover:border-emerald-500/50'}`}>
+                    <span className="block text-[10px] uppercase font-bold opacity-60">{new Date(d).toLocaleDateString('pt-PT', { weekday: 'short' })}</span>
+                    <span className="block text-lg font-black">{new Date(d).getDate()}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: Horário */}
+          {step === 3 && (
+            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+              <button onClick={() => setStep(2)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-emerald-500 transition-colors"><ChevronLeft size={14}/> Voltar ao calendário</button>
+              <h3 className="text-white font-bold flex items-center gap-2"><Clock size={18} className="text-emerald-500"/> Horários para {selectedService?.name}</h3>
+              
+              {loading ? (
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {generateAvailableTimes().map((t) => (
+                    <button key={t} onClick={() => { setSelectedTime(t); setStep(4); }} className={`p-2 rounded-xl border text-sm font-bold transition-all ${selectedTime === t ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-stone-950 border-white/5 text-stone-400 hover:border-emerald-500'}`}>{t}</button>
+                  ))}
+                  {generateAvailableTimes().length === 0 && <div className="col-span-4 bg-red-500/5 p-6 rounded-2xl text-red-500 text-xs flex flex-col items-center gap-3 border border-red-500/10"><AlertCircle size={24}/><p className="text-center font-bold">Sem horários disponíveis para este dia.</p></div>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 4: Formulário */}
+          {step === 4 && (
+            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+              <button onClick={() => setStep(3)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-emerald-500 transition-colors"><ChevronLeft size={14}/> Voltar aos horários</button>
+              <h3 className="text-white font-bold flex items-center gap-2"><User size={18} className="text-emerald-500"/> Os teus dados</h3>
+              <div className="space-y-4">
+                <div className="relative">
+                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" size={18} />
+                   <input type="text" placeholder="Nome completo" className="w-full bg-stone-950 border border-white/5 rounded-2xl py-5 pl-12 pr-4 text-white outline-none focus:border-emerald-500/50 transition-all font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                </div>
+                <div className="relative">
+                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" size={18} />
+                   <input type="tel" placeholder="Teu telemóvel" className="w-full bg-stone-950 border border-white/5 rounded-2xl py-5 pl-12 pr-4 text-white outline-none focus:border-emerald-500/50 transition-all font-bold" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                </div>
+              </div>
+              <button disabled={loading || !formData.name || !formData.phone} onClick={handleBooking} className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl transition-all flex justify-center items-center gap-2 shadow-xl shadow-emerald-900/20 active:scale-95 transition-all">
+                {loading ? <Loader2 className="animate-spin" /> : "Confirmar Marcação"}
+              </button>
+            </div>
+          )}
+
+          {/* STEP 5: Sucesso */}
+          {step === 5 && (
+            <div className="py-10 text-center space-y-6 animate-in zoom-in duration-500">
+              <div className="w-24 h-24 bg-emerald-600/20 rounded-full flex items-center justify-center mx-auto text-emerald-500 shadow-inner"><CheckCircle2 size={56} /></div>
+              <div className="px-4">
+                <h3 className="text-3xl font-serif text-white font-bold tracking-tight">Marcação Concluída!</h3>
+                <p className="text-stone-400 mt-4 leading-relaxed font-medium">Obrigado <b>{formData.name.split(' ')[0]}</b>, a equipa {BUSINESS_INFO.name} espera por ti no dia <b>{new Date(selectedDate).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}</b> às <b>{selectedTime}</b>.</p>
+              </div>
+              <button onClick={onClose} className="w-full py-5 bg-stone-800 text-white font-black rounded-2xl hover:bg-stone-700 transition-all">Fechar</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BookingModal;
+
+
+==================================================
+ARQUIVO: src\components\Navbar.tsx
+==================================================
+
+import React, { useState, useEffect } from 'react';
+import { Scissors, Menu, X, Phone } from 'lucide-react';
+import { BUSINESS_INFO, CLIENT_ID } from '../constants';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+
+// Interface para receber a função que abre o login
+interface NavbarProps {
+  onAdminClick: () => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ onAdminClick }) => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [dynamicBookingUrl, setDynamicBookingUrl] = useState(BUSINESS_INFO.bookingUrl);
+  
+  // --- LÓGICA DO CLIQUE SECRETO (EASTER EGG) ---
+  const [clickCount, setClickCount] = useState(0);
+
+  const handleLogoClick = () => {
+    setClickCount(prev => prev + 1);
+    
+    // Resetar o contador se o utilizador demorar mais de 2 segundos entre cliques
+    const timer = setTimeout(() => {
+      setClickCount(0);
+    }, 2000);
+
+    if (clickCount + 1 === 5) {
+      clearTimeout(timer);
+      onAdminClick(); // Dispara o modal de login
+      setClickCount(0);
+    }
+  };
+
+  // --- ESCUTAR METADADOS PARA LINK DE RESERVA DINÂMICO ---
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "metadata"), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        // Se houver um link de whatsapp/reserva nos metadados, usa-o. Caso contrário, usa o do constants.
+        if (data.socialLinks?.whatsapp) {
+          setDynamicBookingUrl(data.socialLinks.whatsapp);
+        } else {
+          setDynamicBookingUrl(BUSINESS_INFO.bookingUrl);
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: 'Início', href: '#inicio' },
+    { name: 'Serviços', href: '#servicos' },
+    { name: 'A Barbearia', href: '#sobre' },
+    { name: 'Contacto', href: '#contacto' },
+  ];
+
+  return (
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-black/95 backdrop-blur-md py-4 shadow-xl border-b border-emerald-900/20' : 'bg-transparent py-6'}`}>
+      <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
+        
+        {/* LOGO COM ACESSO SECRETO */}
+        <div 
+          className="flex items-center gap-2 group cursor-pointer select-none" 
+          onClick={handleLogoClick}
+          title={BUSINESS_INFO.name}
+        >
+          <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white group-hover:rotate-12 transition-transform shadow-lg shadow-emerald-900/40">
+            <Scissors size={24} />
+          </div>
+          <div>
+            <h1 className="font-serif text-xl font-bold tracking-tight text-white leading-none uppercase">{BUSINESS_INFO.name}</h1>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-emerald-500 font-bold">{BUSINESS_INFO.subName}</p>
+          </div>
+        </div>
+
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center gap-8">
+          {navLinks.map((link) => (
+            <a 
+              key={link.name} 
+              href={link.href} 
+              className="text-sm font-medium text-stone-300 hover:text-emerald-500 transition-colors uppercase tracking-wider"
+            >
+              {link.name}
+            </a>
+          ))}
+          <a 
+            href={dynamicBookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-emerald-900/20 uppercase tracking-wide flex items-center gap-2"
+          >
+            <Phone size={16} />
+            Ligar Agora
+          </a>
+        </div>
+
+        {/* Mobile Toggle */}
+        <button 
+          className="md:hidden text-white"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+        </button>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 right-0 bg-stone-900 border-t border-emerald-900/20 animate-in slide-in-from-top duration-300 shadow-2xl">
+          <div className="flex flex-col p-6 gap-4">
+            {navLinks.map((link) => (
+              <a 
+                key={link.name} 
+                href={link.href} 
+                className="text-lg font-medium text-stone-100 hover:text-emerald-500 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {link.name}
+              </a>
+            ))}
+            <a 
+              href={dynamicBookingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-emerald-600 text-white text-center py-4 rounded-xl font-bold mt-2 shadow-lg uppercase"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Marcar Agora
+            </a>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+};
+
+export default Navbar;
+
+
+==================================================
+ARQUIVO: src\constants.tsx
+==================================================
+
+// src/constants.tsx
+
+// 1. Identificador Único do Cliente (Multi-tenant)
+// Isso criará a pasta: businesses/la-barbiere-sintra/ no seu Firestore
+export const CLIENT_ID = 'la-barbiere-sintra';
+
+// 2. Informações de Exibição do Negócio
+export const BUSINESS_INFO = {
+  name: "La Barbière",
+  subName: "Espaço Homem",
+  owner: "Equipa La Barbière",
+  phone: '910 152 688', 
+  address: 'Av. Heliodoro Salgado 102',
+  city: '2710-573 Sintra, Portugal',
+  openingHours: 'Segunda a Sábado: 09:00 - 20:00',
+  bookingUrl: 'https://wa.me/351910152688', 
+  googleMapsUrl: 'https://maps.app.goo.gl/Mes2wiu4m1G6Mweu7', 
+  instagramUrl: 'https://instagram.com/labarbiere' 
+};
+
+// 3. Serviços Iniciais (Fallback)
+// Nota: Assim que você cadastrar no Admin, o sistema usará os dados do Firestore
+export const SERVICES = [
+  { 
+    id: '1', 
+    name: 'Corte de Cabelo', 
+    description: 'Corte clássico ou moderno com acabamento premium.', 
+    price: '12€',
+    duration: 30
+  },
+  { 
+    id: '2', 
+    name: 'Barba Completa', 
+    description: 'Design de barba com toalha quente e produtos específicos.', 
+    price: '10€',
+    duration: 30
+  },
+  { 
+    id: '3', 
+    name: 'Corte & Barba', 
+    description: 'Pacote completo para renovar o visual masculino.', 
+    price: '20€',
+    duration: 60
+  }
+];
+
+// 4. Reviews extraídas/adaptadas do Google Maps Sintra
+export const REVIEWS = [
+  {
+    id: 1,
+    author: 'Alex Sneade',
+    date: 'há 11 meses',
+    text: 'Barbeiro muito atencioso. Se precisar de um serviço de barbeiro na zona de Sintra, recomendo vivamente!',
+    avatar: 'https://ui-avatars.com/api/?name=Alex+Sneade&background=059669&color=fff'
+  },
+  {
+    id: 2,
+    author: 'Killian Lobato',
+    date: 'há 9 meses',
+    text: 'Muito profissional, preço acessível e muito brio no que toca ao perfeccionismo.',
+    avatar: 'https://ui-avatars.com/api/?name=Killian+Lobato&background=059669&color=fff'
+  },
+  {
+    id: 3,
+    author: 'Mikael Victor Castro',
+    date: 'há 6 meses',
+    text: 'Um lugar ótimo para cuidar do estilo. Profissionalismo e bom ambiente garantidos.',
+    avatar: 'https://ui-avatars.com/api/?name=Mikael+Victor&background=059669&color=fff'
+  }
+];
+
+// 5. Galeria Unificada (8 fotos padrão .webp na pasta public/images/)
+export const GALLERY_IMAGES = [
+  { id: 1, url: '/images/foto01.webp', alt: 'La Barbière Sintra - Estilo 01' },
+  { id: 2, url: '/images/foto02.webp', alt: 'La Barbière Sintra - Estilo 02' },
+  { id: 3, url: '/images/foto03.webp', alt: 'La Barbière Sintra - Estilo 03' },
+  { id: 4, url: '/images/foto04.webp', alt: 'La Barbière Sintra - Estilo 04' },
+  { id: 5, url: '/images/foto05.webp', alt: 'La Barbière Sintra - Interior 01' },
+  { id: 6, url: '/images/foto06.webp', alt: 'La Barbière Sintra - Interior 02' },
+  { id: 7, url: '/images/foto07.webp', alt: 'La Barbière Sintra - Interior 03' },
+  { id: 8, url: '/images/foto08.webp', alt: 'La Barbière Sintra - Interior 04' },
+];
+
+
+==================================================
+ARQUIVO: src\firebase.ts
+==================================================
+
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage"; // 1. Importar o motor de Storage
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+// Inicializa o Firebase
+const app = initializeApp(firebaseConfig);
+
+// 2. Exportar os serviços corretamente
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app); // Esta é a linha que estava a faltar ou com erro
+
+
+==================================================
+ARQUIVO: src\index.tsx
+==================================================
+
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App"; // Caminho corrigido
+
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  throw new Error("Não foi possível encontrar o elemento root");
+}
+
+const root = ReactDOM.createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+
+==================================================
+ARQUIVO: src\metadata.json
+==================================================
+
+{
+  "name": "Barbearia Premium Lisboa",
+  "description": "Website oficial da Barbearia Premium em Lisboa. Experiência premium com cortes clássicos e modernos, barba com toalha quente e atendimento personalizado no coração do Areeiro e Saldanha.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
+
+
+==================================================
+ARQUIVO: src\types.ts
+==================================================
+
+// src/types.ts
+
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  duration: number; 
+}
+
+export interface Review {
+  id: number;
+  author: string;
+  date: string;
+  text: string;
+  avatar?: string;
+}
+
+export interface Appointment {
+  id?: string;
+  serviceId: string;
+  serviceName: string;
+  clientName: string;
+  clientPhone: string;
+  date: string; 
+  startTime: string; 
+  endTime: string;   
+  createdAt: any;    
+}
+
+export interface WorkConfig {
+  id?: string;
+  startHour: string; 
+  endHour: string;   
+  breakStart?: string; 
+  breakEnd?: string;   
+  daysOff: number[]; 
+}
+
+export interface TimeBlock {
+  id?: string;
+  title: string;      
+  date: string;       
+  startTime: string;
+  endTime: string;
+  isRecurring: boolean;
+  recurringType?: 'daily' | 'weekly' | 'monthly';
+  repeatCount?: number; 
+}
+
+// --- NOVAS INTERFACES PARA REDES SOCIAIS E GALERIA ---
+
+export interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  whatsapp?: string; // Caso o cliente queira mudar o número de reserva
+}
+
+export interface GalleryImage {
+  id: number;
+  url: string;
+  alt: string;
+}
+
+export interface BusinessProfile {
+  socialLinks: SocialLinks;
+  gallery: GalleryImage[];
+  updatedAt?: any;
+}
+
+
+==================================================
+ARQUIVO: src\vite-env.d.ts
+==================================================
+
+/// <reference types="vite/client" />
+
+
+==================================================
+ARQUIVO: tsconfig.json
+==================================================
+
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ],
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  }
+}
+
+
+==================================================
+ARQUIVO: vite.config.ts
+==================================================
+
+import path from 'path';
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig(({ mode }) => {
+    const env = loadEnv(mode, '.', '');
+    return {
+      server: {
+        port: 3000,
+        host: '0.0.0.0',
+      },
+      plugins: [react()],
+      define: {
+        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+      },
+      resolve: {
+        alias: {
+          '@': path.resolve(__dirname, '.'),
+        }
+      }
+    };
+});
+
+
