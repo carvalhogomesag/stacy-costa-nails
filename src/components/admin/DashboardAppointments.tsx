@@ -59,103 +59,94 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-[#b5967a]">
-        <Loader2 className="animate-spin mb-4" size={32} />
-        <p className="text-stone-500 font-medium tracking-widest uppercase text-[10px]">A carregar agenda...</p>
+        <Loader2 className="animate-spin mb-4" size={24} />
+        <p className="text-stone-500 font-medium tracking-widest uppercase text-[8px]">A carregar...</p>
       </div>
     );
   }
 
   return (
-    <div className="animate-in fade-in duration-500 h-full flex flex-col">
+    <div className="animate-in fade-in duration-500 h-full flex flex-col overflow-hidden">
       
-      {/* Cabeçalho da Aba - Otimizado para Mobile */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
-        <div className="flex items-center gap-3">
-          <CalendarIcon className="text-[#b5967a] w-5 h-5 md:w-6 md:h-6"/> 
-          <h3 className="text-white font-bold text-base md:text-lg uppercase tracking-tight">
-            Agenda de Reservas
+      {/* Cabeçalho da Aba - COMPACTAÇÃO EXTREMA */}
+      <div className="flex items-center justify-between mb-2 md:mb-5 gap-2 px-1">
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="text-[#b5967a] w-4 h-4 md:w-6 md:h-6"/> 
+          <h3 className="text-white font-bold text-sm md:text-lg uppercase tracking-tight">
+            Agenda
           </h3>
         </div>
         
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Botão Nova Marcação mais compacto */}
+        <div className="flex items-center gap-2">
+          {/* Botão Nova Marcação Ultra Slim no Mobile */}
           <button 
             onClick={onNewBooking}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#b5967a] hover:bg-[#a38569] text-white px-4 py-2.5 rounded-xl text-[11px] font-black transition-all shadow-lg active:scale-95 uppercase tracking-wider"
+            className="flex items-center justify-center gap-1.5 bg-[#b5967a] hover:bg-[#a38569] text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all shadow-lg active:scale-95 uppercase tracking-wider"
           >
-            <Plus size={14} /> MARCAÇÃO
+            <Plus size={14} strokeWidth={3} /> <span className="hidden xs:inline">Nova</span>
           </button>
 
           {/* Selector de Vista compacto */}
-          <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
+          <div className="flex bg-stone-900 border border-white/5 p-0.5 md:p-1 rounded-lg md:rounded-xl">
             <button 
               onClick={() => setAppointmentsMode('calendar')} 
-              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'calendar' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600'}`}
-              title="Vista de Calendário"
+              className={`p-1.5 md:p-2 rounded-md transition-all ${appointmentsMode === 'calendar' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600'}`}
             >
-              <CalendarDays size={18}/>
+              <CalendarDays size={16}/>
             </button>
             <button 
               onClick={() => setAppointmentsMode('list')} 
-              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'list' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600'}`}
-              title="Vista de Lista"
+              className={`p-1.5 md:p-2 rounded-md transition-all ${appointmentsMode === 'list' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600'}`}
             >
-              <LayoutList size={18}/>
+              <LayoutList size={16}/>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Conteúdo Dinâmico */}
-      {appointmentsMode === 'calendar' ? (
-        <div className="flex-1 min-h-0 overflow-hidden">
+      {/* Área do Calendário - Ocupa agora o máximo de espaço possível */}
+      <div className="flex-1 min-h-0">
+        {appointmentsMode === 'calendar' ? (
           <AdminCalendar 
             appointments={appointments} 
             timeBlocks={timeBlocks} 
             onEditAppointment={onEditAppointment} 
           />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {appointments.length === 0 ? (
-            <div className="col-span-full bg-stone-900/50 border border-dashed border-white/10 rounded-2xl py-12 text-center px-6">
-              <p className="text-stone-600 italic text-sm font-light">Sem marcações registadas para os próximos dias.</p>
-            </div>
-          ) : (
-            appointments.map(app => (
-              <div 
-                key={app.id} 
-                onClick={() => onEditAppointment(app)}
-                className="bg-stone-900 border border-white/5 p-4 md:p-5 rounded-2xl relative group shadow-lg hover:border-[#b5967a]/30 transition-all cursor-pointer"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <span className="bg-[#b5967a]/10 text-[#b5967a] px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-[#b5967a]/20">
-                    {app.serviceName}
-                  </span>
-                  <button 
-                    onClick={(e) => handleDeleteApp(e, app.id!)} 
-                    className="text-stone-700 hover:text-red-500 transition-colors p-1"
-                  >
-                    <Trash2 size={16}/>
-                  </button>
-                </div>
-                
-                <div className="text-white font-bold text-base leading-tight mb-2">{app.clientName}</div>
-                
-                <div className="flex flex-col gap-1.5">
-                  <div className="text-stone-400 text-[11px] font-medium flex items-center gap-2">
-                    <Clock size={12} className="text-[#b5967a]" />
-                    {new Date(app.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} • {app.startTime} - {app.endTime}
-                  </div>
-                  <div className="flex items-center gap-2 text-[#d4bca9] font-bold text-[11px]">
-                    <Phone size={12} className="text-[#b5967a]" /> {app.clientPhone}
-                  </div>
-                </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto h-full pr-1">
+            {appointments.length === 0 ? (
+              <div className="col-span-full bg-stone-900/50 border border-dashed border-white/10 rounded-2xl py-10 text-center px-6">
+                <p className="text-stone-600 italic text-xs font-light">Sem marcações registadas.</p>
               </div>
-            ))
-          )}
-        </div>
-      )}
+            ) : (
+              appointments.map(app => (
+                <div 
+                  key={app.id} 
+                  onClick={() => onEditAppointment(app)}
+                  className="bg-stone-900 border border-white/5 p-4 rounded-2xl relative group shadow-lg hover:border-[#b5967a]/30 transition-all cursor-pointer"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="bg-[#b5967a]/10 text-[#b5967a] px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-[#b5967a]/20">
+                      {app.serviceName}
+                    </span>
+                    <button 
+                      onClick={(e) => handleDeleteApp(e, app.id!)} 
+                      className="text-stone-700 hover:text-red-500 transition-colors p-1"
+                    >
+                      <Trash2 size={14}/>
+                    </button>
+                  </div>
+                  <div className="text-white font-bold text-sm leading-tight mb-1">{app.clientName}</div>
+                  <div className="text-stone-400 text-[10px] font-medium flex items-center gap-1.5">
+                    <Clock size={10} className="text-[#b5967a]" />
+                    {app.startTime} - {app.endTime}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
