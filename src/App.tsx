@@ -7,8 +7,9 @@ import {
 } from 'lucide-react';
 
 // FIREBASE
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // COMPONENTES
 import Navbar from './components/Navbar';
@@ -37,7 +38,19 @@ const App: React.FC = () => {
     mapAddress?: string;
   }>({});
 
-  // 1. ESCUTAR SERVIÇOS DO FIREBASE (Multi-tenant)
+  // 1. SINCRONIZAR ESTADO DE AUTENTICAÇÃO (Evita que o Dashboard bloqueie o site ao carregar)
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsDashboardOpen(true);
+      } else {
+        setIsDashboardOpen(false);
+      }
+    });
+    return () => unsubAuth();
+  }, []);
+
+  // 2. ESCUTAR SERVIÇOS DO FIREBASE (Multi-tenant)
   useEffect(() => {
     const q = query(
       collection(db, "businesses", CLIENT_ID, "services"), 
@@ -56,7 +69,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. ESCUTAR METADADOS (Redes Sociais, Galeria e Mapa da Nuvem)
+  // 3. ESCUTAR METADADOS (Redes Sociais, Galeria e Mapa da Nuvem)
   useEffect(() => {
     const unsubMetadata = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "metadata"), (snap) => {
       if (snap.exists()) {
@@ -89,25 +102,34 @@ const App: React.FC = () => {
   };
 
   return (
-    // TEMA: Nude, Bege e Champagne (Stacy Costa Nails)
+    // TEMA: Nude, Bege e Champagne (Identidade Stacy Costa Nails)
     <div className="min-h-screen flex flex-col selection:bg-[#d4bca9] selection:text-[#4a3f35] bg-[#fdfbf7]">
       
+      {/* NAVBAR */}
       <Navbar onAdminClick={() => setIsAdminLoginOpen(true)} />
 
-      <AdminLogin 
-        isOpen={isAdminLoginOpen} 
-        onClose={() => setIsAdminLoginOpen(false)} 
-        onLoginSuccess={() => setIsDashboardOpen(true)}
-      />
+      {/* COMPONENTES ADMINISTRATIVOS (RENDERIZAÇÃO CONDICIONAL PARA EVITAR OVERLAYS) */}
+      {isAdminLoginOpen && (
+        <AdminLogin 
+          isOpen={isAdminLoginOpen} 
+          onClose={() => setIsAdminLoginOpen(false)} 
+          onLoginSuccess={() => {
+            setIsAdminLoginOpen(false);
+            setIsDashboardOpen(true);
+          }}
+        />
+      )}
       
       {isDashboardOpen && (
         <AdminDashboard onLogout={() => setIsDashboardOpen(false)} />
       )}
 
-      <BookingModal 
-        isOpen={isBookingOpen} 
-        onClose={() => setIsBookingOpen(false)} 
-      />
+      {isBookingOpen && (
+        <BookingModal 
+          isOpen={isBookingOpen} 
+          onClose={() => setIsBookingOpen(false)} 
+        />
+      )}
 
       {/* HERO SECTION */}
       <section id="inicio" className="relative min-h-[90vh] md:min-h-[95vh] flex items-center justify-center overflow-hidden bg-[#1a1714]">
@@ -138,7 +160,7 @@ const App: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-5 justify-center px-4">
               <button 
                 onClick={() => setIsBookingOpen(true)}
-                className="bg-[#b5967a] hover:bg-[#a38569] text-white px-10 py-5 rounded-full text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-2xl shadow-black/40 group"
+                className="bg-[#b5967a] hover:bg-[#a38569] text-white px-10 py-5 rounded-full text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-2xl shadow-black/40 group active:scale-95"
               >
                 Marcar Experiência <ArrowRight className="group-hover:translate-x-1 transition-transform" />
               </button>
@@ -148,8 +170,8 @@ const App: React.FC = () => {
       </section>
 
       {/* HIGHLIGHTS */}
-      <section className="py-16 md:py-24 bg-white relative overflow-hidden text-center">
-        <div className="container mx-auto px-4">
+      <section className="py-16 md:py-24 bg-white relative overflow-hidden text-center text-[#4a3f35]">
+        <div className="container mx-auto px-4 text-center">
           <div className="grid md:grid-cols-3 gap-12">
             {[
               { icon: ShieldCheck, title: "Rigor & Higiene", text: "Espaço projetado para o teu conforto com os mais altos padrões de esterilização." },
@@ -160,7 +182,7 @@ const App: React.FC = () => {
                 <div className="w-20 h-20 bg-[#fdfbf7] border border-[#e5dcd3] rounded-full flex items-center justify-center text-[#b5967a] mb-6 group-hover:scale-110 transition-transform shadow-sm">
                   <item.icon size={32} />
                 </div>
-                <h3 className="text-xl font-bold font-serif text-[#4a3f35] mb-3">{item.title}</h3>
+                <h3 className="text-xl font-bold font-serif mb-3">{item.title}</h3>
                 <p className="text-stone-500 leading-relaxed text-sm max-w-xs">{item.text}</p>
               </div>
             ))}
@@ -209,7 +231,7 @@ const App: React.FC = () => {
               </div>
               <div className="absolute -bottom-8 -left-8 bg-[#4a3f35] text-white p-10 rounded-3xl max-w-xs shadow-2xl z-20 hidden md:block border border-white/10">
                 <Quote className="text-[#b5967a] mb-4" size={32} />
-                <p className="font-medium italic text-lg leading-snug">"O brio e o perfeccionismo são as marcas de cada trabalho que realizo."</p>
+                <p className="font-medium italic text-lg leading-snug">"{REVIEWS[0].text}"</p>
                 <p className="text-[#b5967a] text-xs mt-6 uppercase font-bold tracking-widest">{BUSINESS_INFO.owner}</p>
               </div>
             </div>
@@ -223,7 +245,7 @@ const App: React.FC = () => {
               </div>
               <button 
                 onClick={() => setIsBookingOpen(true)}
-                className="mt-10 text-[#b5967a] font-bold flex items-center gap-2 group border-b border-[#b5967a] pb-1"
+                className="mt-10 text-[#b5967a] font-bold flex items-center gap-2 group border-b border-[#b5967a] pb-1 active:scale-95 transition-all"
               >
                 Marca a tua visita <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
@@ -252,7 +274,7 @@ const App: React.FC = () => {
 
             <div className="bg-[#4a3f35] aspect-[3/4] rounded-3xl flex flex-col items-center justify-center p-8 shadow-xl">
               <Camera size={32} className="text-[#b5967a] mb-6 group-hover:scale-110 transition-transform" />
-              <h4 className="text-white font-black text-xl leading-tight mb-6 uppercase">Acompanha-nos</h4>
+              <h4 className="text-white font-black text-xl leading-tight mb-6 uppercase tracking-widest">Segue-nos</h4>
               
               <div className="flex gap-4">
                 {visualMetadata.socialLinks?.instagram && (
@@ -299,32 +321,31 @@ const App: React.FC = () => {
       {/* CONTACTO COM MAPA DINÂMICO */}
       <section id="contacto" className="py-20 md:py-32 bg-[#fdfbf7] text-left">
         <div className="container mx-auto px-4 grid lg:grid-cols-12 gap-16">
-          <div className="lg:col-span-5 space-y-12">
-            <h2 className="font-serif text-5xl md:text-6xl font-bold text-[#4a3f35] italic uppercase tracking-tighter leading-none">Vem Visitar-nos</h2>
+          <div className="lg:col-span-5 space-y-12 text-[#4a3f35]">
+            <h2 className="font-serif text-5xl md:text-6xl font-bold italic uppercase tracking-tighter leading-none">Vem Visitar-nos</h2>
             <div className="space-y-10">
               <div className="flex gap-6">
                 <div className="w-14 h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
                    <MapPin size={28} />
                 </div>
-                <div><h4 className="text-[#4a3f35] font-bold text-xl mb-1">Localização</h4><p className="text-stone-500 font-light">{BUSINESS_INFO.address}<br/>{BUSINESS_INFO.city}</p></div>
+                <div><h4 className="font-bold text-xl mb-1">Localização</h4><p className="text-stone-500 font-light">{BUSINESS_INFO.address}<br/>{BUSINESS_INFO.city}</p></div>
               </div>
               <div className="flex gap-6">
                 <div className="w-14 h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
                    <Clock size={28} />
                 </div>
-                <div><h4 className="text-[#4a3f35] font-bold text-xl mb-1">Horário</h4><p className="text-stone-500 font-light">{BUSINESS_INFO.openingHours}</p></div>
+                <div><h4 className="font-bold text-xl mb-1">Horário</h4><p className="text-stone-500 font-light">{BUSINESS_INFO.openingHours}</p></div>
               </div>
               <div className="flex gap-6">
                 <div className="w-14 h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
                    <Phone size={28} />
                 </div>
-                <div><h4 className="text-[#4a3f35] font-bold text-xl mb-1">Telemóvel</h4><p className="text-[#4a3f35] text-3xl font-bold tracking-tight">{BUSINESS_INFO.phone}</p></div>
+                <div><h4 className="font-bold text-xl mb-1">Telemóvel</h4><p className="text-[#4a3f35] text-3xl font-bold tracking-tight">{BUSINESS_INFO.phone}</p></div>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-7 h-[500px] md:h-[600px] rounded-[4rem] overflow-hidden border-[10px] border-white shadow-2xl relative group">
-            {/* IFRAME INTERATIVO DO GOOGLE MAPS */}
             <iframe 
               src={getMapIframeUrl()} 
               width="100%" 
