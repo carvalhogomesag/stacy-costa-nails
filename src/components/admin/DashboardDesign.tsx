@@ -4,7 +4,7 @@ import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   Instagram, Facebook, Music2, Camera, Link, Globe, 
-  AlertTriangle, Loader2, Save, Upload, MapPin, Info 
+  AlertTriangle, Loader2, Save, Upload, MapPin, Info, User 
 } from 'lucide-react';
 import { CLIENT_ID, BUSINESS_INFO } from '../../constants';
 import { SocialLinks } from '../../types';
@@ -31,7 +31,6 @@ const DashboardDesign: React.FC = () => {
     return () => unsub();
   }, []);
 
-  // FUNÇÃO CORRIGIDA: getMapIframeUrl
   const getMapIframeUrl = () => {
     const query = mapAddress || `${BUSINESS_INFO.address}, ${BUSINESS_INFO.city}`;
     return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
@@ -58,7 +57,7 @@ const DashboardDesign: React.FC = () => {
     if (!file) return;
 
     if (!file.type.includes('webp')) {
-      alert("Por favor, utilize apenas imagens no formato .webp para garantir a performance.");
+      alert("Por favor, utilize apenas imagens no formato .webp para garantir a performance do site.");
       return;
     }
 
@@ -84,6 +83,14 @@ const DashboardDesign: React.FC = () => {
     setUploadingIdx(null);
   };
 
+  // Função auxiliar para dar dicas de UX nos slots de fotos
+  const getSlotUX = (idx: number) => {
+    if (idx === 0) return { title: "Banner (Fundo)", icon: <Camera size={32} className="text-stone-700" />, border: "border-stone-600 border-dashed bg-stone-900" };
+    if (idx === 4) return { title: "Foto de Perfil", icon: <User size={32} className="text-[#b5967a]" />, border: "border-[#b5967a] border-solid bg-[#b5967a]/5 shadow-[0_0_15px_rgba(181,150,122,0.1)]" };
+    if (idx >= 5) return { title: `Foto do Espaço ${idx - 4}`, icon: <Camera size={32} className="text-stone-800" />, border: "border-white/10 border-dashed bg-stone-950" };
+    return { title: `Trabalho ${idx + 1}`, icon: <Camera size={32} className="text-stone-800" />, border: "border-white/10 border-dashed bg-stone-950" };
+  };
+
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 font-sans">
       <div className="grid lg:grid-cols-2 gap-8">
@@ -95,7 +102,7 @@ const DashboardDesign: React.FC = () => {
           </h3>
           
           <div className="space-y-5">
-            {/* INPUT GOOGLE MAPS COM INSTRUÇÃO */}
+            {/* INPUT GOOGLE MAPS */}
             <div className="space-y-3">
               <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest flex items-center gap-2">
                 <MapPin size={12} className="text-[#b5967a]" /> Ponto no Google Maps
@@ -132,6 +139,15 @@ const DashboardDesign: React.FC = () => {
                     className="w-full bg-stone-950 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-[#b5967a]"
                     value={socialLinks.tiktok || ''}
                     onChange={(e) => setSocialLinks({...socialLinks, tiktok: e.target.value})}
+                  />
+               </div>
+               <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] uppercase font-black text-stone-500 ml-1">Facebook</label>
+                  <input 
+                    placeholder="Link da página"
+                    className="w-full bg-stone-950 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-[#b5967a]"
+                    value={socialLinks.facebook || ''}
+                    onChange={(e) => setSocialLinks({...socialLinks, facebook: e.target.value})}
                   />
                </div>
             </div>
@@ -176,7 +192,7 @@ const DashboardDesign: React.FC = () => {
       <div className="bg-stone-900 border border-[#b5967a]/20 p-8 rounded-[3rem] shadow-2xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <h3 className="text-white font-bold flex items-center gap-3 text-lg uppercase tracking-widest">
-            <Camera className="text-[#b5967a]"/> O Meu Portfolio (8 Slots)
+            <Camera className="text-[#b5967a]"/> O Meu Portfolio
           </h3>
           <div className="flex items-center gap-2 text-stone-500 bg-stone-950 px-4 py-2 rounded-full border border-white/5">
             <AlertTriangle size={14} className="text-[#b5967a]" />
@@ -184,47 +200,60 @@ const DashboardDesign: React.FC = () => {
           </div>
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {gallery.map((url, idx) => (
-            <div key={idx} className="relative group">
-              <label className="cursor-pointer block">
-                <input 
-                  type="file" 
-                  accept="image/webp" 
-                  className="hidden" 
-                  onChange={(e) => handleFileUpload(e, idx)}
-                  disabled={uploadingIdx !== null}
-                />
-                <div className="aspect-[4/5] bg-stone-950 border border-dashed border-white/10 rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-2 hover:border-[#b5967a]/50 transition-all relative shadow-inner">
-                  {url ? (
-                    <>
-                      <img src={url} alt={`Slot ${idx + 1}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                         <div className="bg-[#b5967a] p-3 rounded-full text-white shadow-2xl scale-110">
-                            <Upload size={20} />
-                         </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="text-stone-800" size={32} />
-                      <span className="text-[10px] font-black text-stone-700 uppercase tracking-widest">Slot {idx + 1}</span>
-                    </>
-                  )}
-
-                  {uploadingIdx === idx && (
-                    <div className="absolute inset-0 bg-stone-950/80 flex items-center justify-center backdrop-blur-sm z-50">
-                      <Loader2 className="animate-spin text-[#b5967a]" size={32} />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {gallery.map((url, idx) => {
+            const ux = getSlotUX(idx);
+            return (
+              <div key={idx} className="relative group">
+                <label className="cursor-pointer block relative">
+                  
+                  {/* Etiqueta de Destaque no Topo */}
+                  {idx === 4 && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b5967a] text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full z-10 shadow-lg whitespace-nowrap">
+                      Sobre Mim
                     </div>
                   )}
-                </div>
-              </label>
-            </div>
-          ))}
+
+                  <input 
+                    type="file" 
+                    accept="image/webp" 
+                    className="hidden" 
+                    onChange={(e) => handleFileUpload(e, idx)}
+                    disabled={uploadingIdx !== null}
+                  />
+                  <div className={`aspect-[4/5] border rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-3 hover:border-[#b5967a]/50 transition-all relative ${ux.border}`}>
+                    {url ? (
+                      <>
+                        <img src={url} alt={`Slot ${idx + 1}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                           <div className="bg-[#b5967a] p-3 rounded-full text-white shadow-2xl scale-110">
+                              <Upload size={20} />
+                           </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {ux.icon}
+                        <span className={`text-[10px] font-black uppercase tracking-widest text-center px-2 ${idx === 4 ? 'text-[#b5967a]' : 'text-stone-600'}`}>
+                          {ux.title}
+                        </span>
+                      </>
+                    )}
+
+                    {uploadingIdx === idx && (
+                      <div className="absolute inset-0 bg-stone-950/80 flex items-center justify-center backdrop-blur-sm z-50">
+                        <Loader2 className="animate-spin text-[#b5967a]" size={32} />
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 };
 
-export default DashboardDesign; 
+export default DashboardDesign;
