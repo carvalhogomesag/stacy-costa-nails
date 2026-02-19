@@ -179,117 +179,124 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
         createdAt: serverTimestamp()
       });
       setStep(5);
-    } catch (e) { alert("Erro ao reservar."); }
+    } catch (e) { alert("Erro ao realizar a marcação."); }
     setLoading(false);
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 text-left">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 text-left font-sans">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
       
-      <div className="relative bg-stone-900 border border-emerald-900/30 w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="relative bg-stone-900 border border-[#b5967a]/30 w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-300">
         
-        {/* Header */}
+        {/* Header - Nude & Gold Style */}
         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-stone-900/50">
           <div>
-            <h2 className="text-xl font-bold text-white font-serif tracking-tight">Marcar Serviço</h2>
-            <p className="text-emerald-500 text-xs uppercase tracking-widest font-bold">{BUSINESS_INFO.name} {BUSINESS_INFO.subName}</p>
+            <h2 className="text-xl font-bold text-white font-serif tracking-tight uppercase">Marcar Atendimento</h2>
+            <p className="text-[#b5967a] text-[10px] uppercase tracking-[0.3em] font-black">{BUSINESS_INFO.name} {BUSINESS_INFO.subName}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-stone-400 hover:text-white transition-colors"><X size={24} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-stone-500 hover:text-white transition-colors"><X size={24} /></button>
         </div>
 
         <div className="p-6 max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-800">
           
-          {/* STEP 1: Serviços */}
+          {/* STEP 1: Seleção de Serviços */}
           {step === 1 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-              <p className="text-stone-400 text-sm mb-4">Que serviço desejas hoje?</p>
+              <p className="text-stone-400 text-sm mb-4 font-light">Selecione o serviço pretendido:</p>
               
               {loadingData ? (
-                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#b5967a]" size={32} /></div>
               ) : dbServices.length === 0 ? (
-                <p className="text-stone-500 italic text-center py-10">Não há serviços disponíveis.</p>
+                <p className="text-stone-500 italic text-center py-10">Não existem serviços disponíveis no momento.</p>
               ) : (
                 dbServices.map((s) => (
-                  <button key={s.id} onClick={() => { setSelectedService(s); setStep(2); }} className="w-full flex justify-between items-center p-4 rounded-2xl bg-stone-950 border border-white/5 hover:border-emerald-500/50 group transition-all text-left">
+                  <button key={s.id} onClick={() => { setSelectedService(s); setStep(2); }} className="w-full flex justify-between items-center p-5 rounded-2xl bg-stone-950 border border-white/5 hover:border-[#b5967a]/50 group transition-all text-left shadow-lg">
                     <div className="flex-1 pr-4">
-                      <h3 className="text-white font-bold group-hover:text-emerald-500 transition-colors">{s.name}</h3>
-                      <div className="flex items-center gap-3 mt-1 text-stone-500 text-xs font-medium">
-                        <Clock size={12}/> {s.duration} min | <span className="text-emerald-600 font-bold">{s.price}</span>
+                      <h3 className="text-white font-bold group-hover:text-[#d4bca9] transition-colors">{s.name}</h3>
+                      <div className="flex items-center gap-3 mt-1.5 text-stone-500 text-xs font-medium uppercase tracking-tighter">
+                        <Clock size={12} className="text-[#b5967a]"/> {s.duration} min | <span className="text-[#b5967a] font-black">{s.price}</span>
                       </div>
                     </div>
-                    <ChevronRight size={20} className="text-stone-700 group-hover:text-emerald-500 transition-all" />
+                    <ChevronRight size={20} className="text-stone-700 group-hover:text-[#b5967a] transition-all" />
                   </button>
                 ))
               )}
             </div>
           )}
 
-          {/* STEP 2: Data */}
+          {/* STEP 2: Seleção de Data */}
           {step === 2 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-              <button onClick={() => setStep(1)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-emerald-500 transition-colors"><ChevronLeft size={14}/> Voltar aos serviços</button>
-              <h3 className="text-white font-bold flex items-center gap-2"><Calendar size={18} className="text-emerald-500"/> Escolha um dia</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <button onClick={() => setStep(1)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-[#b5967a] transition-colors uppercase tracking-widest font-bold"><ChevronLeft size={14}/> Voltar</button>
+              <h3 className="text-white font-bold flex items-center gap-2 text-lg"><Calendar size={18} className="text-[#b5967a]"/> Escolha o melhor dia</h3>
+              <div className="grid grid-cols-3 gap-3">
                 {getNextDays().map((d) => (
-                  <button key={d} onClick={() => { setSelectedDate(d); setStep(3); }} className={`p-3 rounded-2xl border transition-all text-center ${selectedDate === d ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-900/20' : 'bg-stone-950 border-white/5 text-stone-400 hover:border-emerald-500/50'}`}>
-                    <span className="block text-[10px] uppercase font-bold opacity-60">{new Date(d).toLocaleDateString('pt-PT', { weekday: 'short' })}</span>
-                    <span className="block text-lg font-black">{new Date(d).getDate()}</span>
+                  <button key={d} onClick={() => { setSelectedDate(d); setStep(3); }} className={`p-4 rounded-2xl border transition-all text-center ${selectedDate === d ? 'bg-[#b5967a] border-[#b5967a] text-white shadow-xl shadow-[#b5967a]/20' : 'bg-stone-950 border-white/5 text-stone-400 hover:border-[#b5967a]/50'}`}>
+                    <span className="block text-[10px] uppercase font-black opacity-60 tracking-widest mb-1">{new Date(d).toLocaleDateString('pt-PT', { weekday: 'short' })}</span>
+                    <span className="block text-xl font-black">{new Date(d).getDate()}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* STEP 3: Horário */}
+          {/* STEP 3: Seleção de Horário */}
           {step === 3 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-              <button onClick={() => setStep(2)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-emerald-500 transition-colors"><ChevronLeft size={14}/> Voltar ao calendário</button>
-              <h3 className="text-white font-bold flex items-center gap-2"><Clock size={18} className="text-emerald-500"/> Horários para {selectedService?.name}</h3>
+              <button onClick={() => setStep(2)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-[#b5967a] transition-colors uppercase tracking-widest font-bold"><ChevronLeft size={14}/> Calendário</button>
+              <h3 className="text-white font-bold flex items-center gap-2 text-lg"><Clock size={18} className="text-[#b5967a]"/> Horários para {selectedService?.name}</h3>
               
               {loading ? (
-                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#b5967a]" size={32} /></div>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
                   {generateAvailableTimes().map((t) => (
-                    <button key={t} onClick={() => { setSelectedTime(t); setStep(4); }} className={`p-2 rounded-xl border text-sm font-bold transition-all ${selectedTime === t ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-stone-950 border-white/5 text-stone-400 hover:border-emerald-500'}`}>{t}</button>
+                    <button key={t} onClick={() => { setSelectedTime(t); setStep(4); }} className={`p-3 rounded-xl border text-sm font-black transition-all ${selectedTime === t ? 'bg-[#b5967a] border-[#b5967a] text-white shadow-lg' : 'bg-stone-950 border-white/5 text-stone-400 hover:border-[#b5967a] hover:text-white'}`}>{t}</button>
                   ))}
-                  {generateAvailableTimes().length === 0 && <div className="col-span-4 bg-red-500/5 p-6 rounded-2xl text-red-500 text-xs flex flex-col items-center gap-3 border border-red-500/10"><AlertCircle size={24}/><p className="text-center font-bold">Sem horários disponíveis para este dia.</p></div>}
+                  {generateAvailableTimes().length === 0 && (
+                    <div className="col-span-4 bg-[#b5967a]/5 p-8 rounded-2xl text-[#b5967a] text-xs flex flex-col items-center gap-3 border border-[#b5967a]/10">
+                      <AlertCircle size={24}/>
+                      <p className="text-center font-bold uppercase tracking-widest">Sem horários para este dia.</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* STEP 4: Formulário */}
+          {/* STEP 4: Dados Pessoais */}
           {step === 4 && (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-              <button onClick={() => setStep(3)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-emerald-500 transition-colors"><ChevronLeft size={14}/> Voltar aos horários</button>
-              <h3 className="text-white font-bold flex items-center gap-2"><User size={18} className="text-emerald-500"/> Os teus dados</h3>
+              <button onClick={() => setStep(3)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-[#b5967a] transition-colors uppercase tracking-widest font-bold"><ChevronLeft size={14}/> Horários</button>
+              <h3 className="text-white font-bold flex items-center gap-2 text-lg"><User size={18} className="text-[#b5967a]"/> Confirmação dos teus dados</h3>
               <div className="space-y-4">
                 <div className="relative">
                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" size={18} />
-                   <input type="text" placeholder="Nome completo" className="w-full bg-stone-950 border border-white/5 rounded-2xl py-5 pl-12 pr-4 text-white outline-none focus:border-emerald-500/50 transition-all font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                   <input type="text" placeholder="Teu Nome" className="w-full bg-stone-950 border border-white/5 rounded-2xl py-5 pl-12 pr-4 text-white outline-none focus:border-[#b5967a]/50 transition-all font-bold placeholder:text-stone-700" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                 </div>
                 <div className="relative">
                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" size={18} />
-                   <input type="tel" placeholder="Teu telemóvel" className="w-full bg-stone-950 border border-white/5 rounded-2xl py-5 pl-12 pr-4 text-white outline-none focus:border-emerald-500/50 transition-all font-bold" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                   <input type="tel" placeholder="Teu Telemóvel" className="w-full bg-stone-950 border border-white/5 rounded-2xl py-5 pl-12 pr-4 text-white outline-none focus:border-[#b5967a]/50 transition-all font-bold placeholder:text-stone-700" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
                 </div>
               </div>
-              <button disabled={loading || !formData.name || !formData.phone} onClick={handleBooking} className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl transition-all flex justify-center items-center gap-2 shadow-xl shadow-emerald-900/20 active:scale-95 transition-all">
-                {loading ? <Loader2 className="animate-spin" /> : "Confirmar Marcação"}
+              <button disabled={loading || !formData.name || !formData.phone} onClick={handleBooking} className="w-full py-5 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-2xl transition-all flex justify-center items-center gap-2 shadow-2xl shadow-[#b5967a]/20 active:scale-95 uppercase tracking-widest text-sm">
+                {loading ? <Loader2 className="animate-spin" /> : "Finalizar Marcação"}
               </button>
             </div>
           )}
 
           {/* STEP 5: Sucesso */}
           {step === 5 && (
-            <div className="py-10 text-center space-y-6 animate-in zoom-in duration-500">
-              <div className="w-24 h-24 bg-emerald-600/20 rounded-full flex items-center justify-center mx-auto text-emerald-500 shadow-inner"><CheckCircle2 size={56} /></div>
-              <div className="px-4">
-                <h3 className="text-3xl font-serif text-white font-bold tracking-tight">Marcação Concluída!</h3>
-                <p className="text-stone-400 mt-4 leading-relaxed font-medium">Obrigado <b>{formData.name.split(' ')[0]}</b>, a equipa {BUSINESS_INFO.name} espera por ti no dia <b>{new Date(selectedDate).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}</b> às <b>{selectedTime}</b>.</p>
+            <div className="py-12 text-center space-y-6 animate-in zoom-in duration-500">
+              <div className="w-24 h-24 bg-[#b5967a]/10 rounded-full flex items-center justify-center mx-auto text-[#b5967a] shadow-inner border border-[#b5967a]/20">
+                <CheckCircle2 size={56} />
               </div>
-              <button onClick={onClose} className="w-full py-5 bg-stone-800 text-white font-black rounded-2xl hover:bg-stone-700 transition-all">Fechar</button>
+              <div className="px-4">
+                <h3 className="text-3xl font-serif text-white font-bold tracking-tight uppercase">Tudo Pronto!</h3>
+                <p className="text-stone-400 mt-4 leading-relaxed font-light">Obrigada <b>{formData.name.split(' ')[0]}</b>! Reservámos o teu momento para dia <b>{new Date(selectedDate).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}</b> às <b>{selectedTime}</b>.</p>
+              </div>
+              <button onClick={onClose} className="w-full py-5 bg-stone-800 hover:bg-stone-700 text-[#d4bca9] font-black rounded-2xl transition-all uppercase tracking-widest text-xs border border-white/5">Fechar</button>
             </div>
           )}
         </div>
