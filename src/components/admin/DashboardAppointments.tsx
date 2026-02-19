@@ -58,26 +58,26 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-emerald-500">
+      <div className="flex flex-col items-center justify-center h-64 text-[#b5967a]">
         <Loader2 className="animate-spin mb-4" size={40} />
-        <p className="text-stone-500 font-medium">A carregar agenda...</p>
+        <p className="text-stone-500 font-medium tracking-widest uppercase text-xs">A carregar agenda...</p>
       </div>
     );
   }
 
   return (
     <div className="animate-in fade-in duration-500 h-full flex flex-col">
-      {/* Cabeçalho da Aba */}
+      {/* Cabeçalho da Aba - Paleta Nude/Gold */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <h3 className="text-white font-bold flex items-center gap-3 text-lg">
-          <CalendarIcon className="text-emerald-500" size={24}/> 
+          <CalendarIcon className="text-[#b5967a]" size={24}/> 
           Agenda de Reservas
         </h3>
         
         <div className="flex items-center gap-3 w-full md:w-auto">
           <button 
             onClick={onNewBooking}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#b5967a] hover:bg-[#a38569] text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg shadow-[#b5967a]/20 active:scale-95"
           >
             <Plus size={16} /> NOVA MARCAÇÃO
           </button>
@@ -85,14 +85,14 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
           <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
             <button 
               onClick={() => setAppointmentsMode('calendar')} 
-              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'calendar' ? 'bg-stone-800 text-emerald-500' : 'text-stone-600 hover:text-stone-400'}`}
+              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'calendar' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600 hover:text-stone-400'}`}
               title="Vista de Calendário"
             >
               <CalendarDays size={20}/>
             </button>
             <button 
               onClick={() => setAppointmentsMode('list')} 
-              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'list' ? 'bg-stone-800 text-emerald-500' : 'text-stone-600 hover:text-stone-400'}`}
+              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'list' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600 hover:text-stone-400'}`}
               title="Vista de Lista"
             >
               <LayoutList size={20}/>
@@ -101,7 +101,7 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
         </div>
       </div>
 
-      {/* Conteúdo Dinâmico: Calendário ou Lista */}
+      {/* Conteúdo Dinâmico */}
       {appointmentsMode === 'calendar' ? (
         <AdminCalendar 
           appointments={appointments} 
@@ -119,16 +119,16 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
               <div 
                 key={app.id} 
                 onClick={() => onEditAppointment(app)}
-                className="bg-stone-900 border border-white/5 p-6 rounded-[2.5rem] relative group shadow-lg hover:border-emerald-500/30 transition-all cursor-pointer"
+                className="bg-stone-900 border border-white/5 p-6 rounded-[2.5rem] relative group shadow-lg hover:border-[#b5967a]/30 transition-all cursor-pointer"
               >
-                <span className="bg-emerald-600/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                <span className="bg-[#b5967a]/10 text-[#b5967a] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                   {app.serviceName}
                 </span>
                 <div className="mt-4 text-white font-bold text-lg leading-tight">{app.clientName}</div>
                 <div className="text-stone-400 text-sm mt-2 font-medium">
                   {new Date(app.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} • {app.startTime} - {app.endTime}
                 </div>
-                <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-[#d4bca9] font-bold text-sm">
                   <Phone size={14}/> {app.clientPhone}
                 </div>
                 <button 

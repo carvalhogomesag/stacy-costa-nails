@@ -1,6 +1,7 @@
 // src/constants.tsx
 
 // 1. Identificador Único (Multi-tenant)
+// Este ID isola completamente os dados e fotos deste cliente no Firebase
 export const CLIENT_ID = 'stacy-costa-nails';
 
 // 2. Informações de Exibição
@@ -13,11 +14,15 @@ export const BUSINESS_INFO = {
   city: '1495-142 Algés, Portugal',
   openingHours: 'Segunda a Sábado: 09:00 - 19:00',
   bookingUrl: 'https://wa.me/351927271352', 
-  googleMapsUrl: 'https://maps.app.goo.gl/PQ4F+8R', 
+  googleMapsUrl: 'https://maps.app.goo.gl/Mes2wiu4m1G6Mweu7', 
   instagramUrl: 'https://instagram.com/stacycostanails' 
 };
 
-// 3. Serviços Iniciais (Fallback)
+// 3. URL de Placeholder Elegante
+// Esta imagem aparecerá nos 8 slots caso o cliente ainda não tenha feito upload de fotos reais.
+export const PLACEHOLDER_IMG = "https://images.unsplash.com/photo-1610992015732-2449b0c26670?q=80&w=1200&auto=format&fit=crop";
+
+// 4. Serviços Iniciais (Fallback)
 export const SERVICES = [
   { 
     id: '1', 
@@ -42,39 +47,27 @@ export const SERVICES = [
   }
 ];
 
-// 4. Reviews reais de Algés
+// 5. Reviews reais de Algés
 export const REVIEWS = [
   {
     id: 1,
     author: 'Manuela Miranda',
     date: 'há 7 meses',
     text: 'A Stacy é maravilhosa! Faço unhas em gel com ela e o resultado é impecável — acabamento perfeito e durabilidade incrível.',
-    avatar: 'https://ui-avatars.com/api/?name=Manuela+Miranda&background=f43f5e&color=fff'
+    avatar: 'https://ui-avatars.com/api/?name=Manuela+Miranda&background=b5967a&color=fff'
   },
   {
     id: 2,
     author: 'Elaine Bueno',
     date: 'há 5 meses',
     text: 'Uma profissional extremamente cuidadosa em todos os aspetos, torna a experiência muito agradável e completa.',
-    avatar: 'https://ui-avatars.com/api/?name=Elaine+Bueno&background=f43f5e&color=fff'
+    avatar: 'https://ui-avatars.com/api/?name=Elaine+Bueno&background=b5967a&color=fff'
   },
   {
     id: 3,
     author: 'Taís Lira',
     date: 'há 4 meses',
     text: 'Atendimento ótimo e as unhas ficam surreais de lindas. Perfeito!',
-    avatar: 'https://ui-avatars.com/api/?name=Tais+Lira&background=f43f5e&color=fff'
+    avatar: 'https://ui-avatars.com/api/?name=Tais+Lira&background=b5967a&color=fff'
   }
-];
-
-// 5. Galeria (Fotos padrão na pasta public/images/)
-export const GALLERY_IMAGES = [
-  { id: 1, url: '/images/foto01.webp', alt: 'Stacy Costa Nails - Trabalho 01' },
-  { id: 2, url: '/images/foto02.webp', alt: 'Stacy Costa Nails - Trabalho 02' },
-  { id: 3, url: '/images/foto03.webp', alt: 'Stacy Costa Nails - Trabalho 03' },
-  { id: 4, url: '/images/foto04.webp', alt: 'Stacy Costa Nails - Trabalho 04' },
-  { id: 5, url: '/images/foto05.webp', alt: 'Espaço Stacy Costa 01' },
-  { id: 6, url: '/images/foto06.webp', alt: 'Espaço Stacy Costa 02' },
-  { id: 7, url: '/images/foto07.webp', alt: 'Espaço Stacy Costa 03' },
-  { id: 8, url: '/images/foto08.webp', alt: 'Espaço Stacy Costa 04' },
 ];
