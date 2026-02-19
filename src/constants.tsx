@@ -14,7 +14,7 @@ export const BUSINESS_INFO = {
   city: '1495-142 Algés, Portugal',
   openingHours: 'Segunda a Sábado: 09:00 - 19:00',
   bookingUrl: 'https://wa.me/351927271352', 
-  googleMapsUrl: 'https://maps.app.goo.gl/Mes2wiu4m1G6Mweu7', 
+  googleMapsUrl: 'https://maps.app.goo.gl/4nGoQuBU2zd3uWQK6', 
   instagramUrl: 'https://instagram.com/stacycostanails' 
 };
 
