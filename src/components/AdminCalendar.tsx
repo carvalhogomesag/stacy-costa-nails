@@ -6,7 +6,8 @@ import {
   User, 
   Scissors, 
   Lock, 
-  Calendar as CalendarIcon 
+  Calendar as CalendarIcon,
+  Heart
 } from 'lucide-react';
 import { Appointment, TimeBlock } from '../types';
 
@@ -94,15 +95,15 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-700">
       
-      {/* CABEÇALHO DA AGENDA */}
+      {/* CABEÇALHO DA AGENDA - PALETA NUDE/BRONZE */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-emerald-600 p-2 rounded-xl shadow-lg shadow-emerald-900/20">
-            <CalendarIcon className="text-white" size={20} />
+          <div className="bg-[#b5967a] p-2.5 rounded-xl shadow-lg shadow-[#b5967a]/20 text-white">
+            <CalendarIcon size={20} />
           </div>
           <div>
-            <h3 className="text-white font-bold text-lg leading-tight">Vista Semanal</h3>
-            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">{weekRangeLabel}</p>
+            <h3 className="text-white font-bold text-lg leading-tight uppercase tracking-tight">Vista Semanal</h3>
+            <p className="text-[#d4bca9] text-[10px] font-black uppercase tracking-[0.2em]">{weekRangeLabel}</p>
           </div>
         </div>
 
@@ -112,7 +113,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
           </button>
           <button 
             onClick={() => setViewDate(new Date())} 
-            className="px-4 py-2 text-xs font-bold text-stone-300 hover:text-emerald-500 transition-colors"
+            className="px-4 py-2 text-[10px] font-black text-stone-300 hover:text-[#b5967a] transition-colors uppercase tracking-widest"
           >
             HOJE
           </button>
@@ -123,20 +124,20 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
       </div>
 
       {/* ÁREA DA GRADE */}
-      <div className="flex-1 overflow-x-auto rounded-[2rem] border border-white/5 bg-stone-950/50 shadow-2xl">
-        <div className="min-w-[800px] relative">
+      <div className="flex-1 overflow-x-auto rounded-[2.5rem] border border-white/5 bg-stone-950/50 shadow-2xl">
+        <div className="min-w-[850px] relative">
           
           {/* DIAS DA SEMANA */}
-          <div className="sticky top-0 z-30 grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr] bg-stone-900 border-b border-white/5">
+          <div className="sticky top-0 z-30 grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr] bg-stone-900 border-b border-white/10">
             <div className="p-4 border-r border-white/5"></div>
             {weekDays.map((day, i) => {
               const isToday = day.toDateString() === new Date().toDateString();
               return (
-                <div key={i} className={`p-3 text-center border-r border-white/5 last:border-0 ${isToday ? 'bg-emerald-600/5' : ''}`}>
-                  <p className="text-[10px] font-black text-stone-500 uppercase tracking-tighter">
+                <div key={i} className={`p-4 text-center border-r border-white/5 last:border-0 ${isToday ? 'bg-[#b5967a]/5' : ''}`}>
+                  <p className="text-[10px] font-black text-stone-500 uppercase tracking-[0.2em] mb-1">
                     {day.toLocaleDateString('pt-PT', { weekday: 'short' })}
                   </p>
-                  <p className={`text-lg font-serif font-bold ${isToday ? 'text-emerald-500' : 'text-white'}`}>
+                  <p className={`text-xl font-serif font-bold ${isToday ? 'text-[#b5967a]' : 'text-white'}`}>
                     {day.getDate()}
                   </p>
                 </div>
@@ -148,12 +149,12 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
           <div className="relative grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr]">
             
             {/* HORAS LATERAIS */}
-            <div className="bg-stone-900/30 border-r border-white/5">
+            <div className="bg-stone-900/30 border-r border-white/5 shadow-inner">
               {hours.map(hour => (
                 <div 
                   key={hour} 
-                  className="text-right pr-4 text-[10px] font-bold text-stone-600 border-b border-white/5"
-                  style={{ height: `${HOUR_HEIGHT}px`, paddingTop: '4px' }}
+                  className="text-right pr-4 text-[10px] font-bold text-stone-600 border-b border-white/[0.03]"
+                  style={{ height: `${HOUR_HEIGHT}px`, paddingTop: '6px' }}
                 >
                   {hour.toString().padStart(2, '0')}:00
                 </div>
@@ -167,7 +168,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
               const dayBlocks = timeBlocks.filter(b => isBlockActiveOnDay(b, day));
 
               return (
-                <div key={colIdx} className="relative border-r border-white/5 last:border-0 pointer-events-auto">
+                <div key={colIdx} className="relative border-r border-white/[0.05] last:border-0 pointer-events-auto group">
                   {/* Linhas de fundo */}
                   {hours.map(h => (
                     <div key={h} className="border-b border-white/[0.02]" style={{ height: `${HOUR_HEIGHT}px` }} />
@@ -191,7 +192,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
                     );
                   })}
 
-                  {/* AGENDAMENTOS (FOREGROUND - CLICÁVEIS) */}
+                  {/* AGENDAMENTOS (BRONZE THEME) */}
                   {dayAppointments.map(app => {
                     const { top } = getTimeData(app.startTime);
                     const height = calculateHeight(app.startTime, app.endTime);
@@ -203,21 +204,21 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
                           e.stopPropagation(); 
                           onEditAppointment(app);
                         }}
-                        className="absolute left-1.5 right-1.5 z-40 rounded-xl bg-stone-900 border-l-4 border-emerald-600 p-2 shadow-2xl ring-1 ring-white/5 hover:ring-emerald-500/50 hover:bg-stone-800 hover:scale-[1.02] hover:z-50 transition-all cursor-pointer group/card select-none"
+                        className="absolute left-1.5 right-1.5 z-40 rounded-2xl bg-stone-900 border-l-4 border-[#b5967a] p-2.5 shadow-2xl ring-1 ring-white/5 hover:ring-[#b5967a]/50 hover:bg-stone-800 hover:scale-[1.02] hover:z-50 transition-all cursor-pointer group/card select-none"
                         style={{ top: `${top}px`, height: `${height}px` }}
                       >
                         <div className="flex flex-col h-full overflow-hidden pointer-events-none">
-                          <div className="flex justify-between items-start mb-1">
-                            <span className="text-[9px] font-black text-emerald-500 uppercase leading-none truncate pr-1">
+                          <div className="flex justify-between items-start mb-1.5">
+                            <span className="text-[9px] font-black text-[#b5967a] uppercase leading-none tracking-widest truncate pr-1">
                               {app.startTime}
                             </span>
-                            <Scissors size={10} className="text-stone-700 group-hover/card:text-emerald-500 transition-colors shrink-0" />
+                            <Heart size={10} className="text-stone-700 group-hover/card:text-[#b5967a] transition-colors shrink-0" />
                           </div>
-                          <p className="text-xs font-bold text-white truncate leading-tight group-hover/card:text-emerald-100 transition-colors">
+                          <p className="text-xs font-bold text-white truncate leading-tight group-hover/card:text-[#d4bca9] transition-colors">
                             {app.clientName}
                           </p>
                           {height > 45 && (
-                            <p className="text-[10px] text-stone-500 font-medium truncate mt-0.5">
+                            <p className="text-[10px] text-stone-500 font-medium truncate mt-1">
                               {app.serviceName}
                             </p>
                           )}
@@ -232,15 +233,15 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* LEGENDA */}
-      <div className="mt-4 flex gap-4 px-2">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-600 shadow-sm shadow-emerald-900/40"></div>
-          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Marcações (Clica para editar)</span>
+      {/* LEGENDA - ATUALIZADA */}
+      <div className="mt-6 flex gap-6 px-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#b5967a] shadow-lg shadow-[#b5967a]/40"></div>
+          <span className="text-[10px] font-black text-stone-500 uppercase tracking-[0.2em]">Marcações (Clicar p/ Editar)</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-stone-800 border border-white/5"></div>
-          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Bloqueios</span>
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-stone-800 border border-white/5"></div>
+          <span className="text-[10px] font-black text-stone-500 uppercase tracking-[0.2em]">Bloqueios</span>
         </div>
       </div>
     </div>
