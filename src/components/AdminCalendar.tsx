@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
-  Clock, 
-  User, 
-  Scissors, 
   Lock, 
   Calendar as CalendarIcon,
+  Clock,
+  User,
   Heart
 } from 'lucide-react';
 import { Appointment, TimeBlock } from '../types';
@@ -20,13 +19,21 @@ interface AdminCalendarProps {
 const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, onEditAppointment }) => {
   const [viewDate, setViewDate] = useState(new Date());
 
-  // --- CONFIGURAÇÃO DA GRADE COMPACTA ---
-  const HOUR_HEIGHT = 60; // Reduzido de 80 para 60 para ver mais horas
+  // --- CONFIGURAÇÃO DA GRADE ESTILO FRESHA ---
+  const HOUR_HEIGHT = 65; 
   const START_HOUR = 8;   
   const END_HOUR = 21;    
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
-  // --- LÓGICA DE DATAS ---
+  // Mapeamento de cores para os cards (Estilo Fresha)
+  const getServiceColor = (serviceName: string) => {
+    const name = serviceName.toLowerCase();
+    if (name.includes('gel')) return 'bg-rose-100 border-rose-200 text-rose-700';
+    if (name.includes('alongamento')) return 'bg-amber-100 border-amber-200 text-amber-700';
+    if (name.includes('pedi')) return 'bg-emerald-100 border-emerald-200 text-emerald-700';
+    return 'bg-stone-100 border-stone-200 text-stone-700';
+  };
+
   const getWeekDays = (date: Date) => {
     const start = new Date(date);
     const day = start.getDay();
@@ -48,7 +55,6 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     setViewDate(next);
   };
 
-  // --- AUXILIARES DE POSICIONAMENTO ---
   const getTimeData = (timeStr: string) => {
     const [h, m] = timeStr.split(':').map(Number);
     const totalMinutes = (h * 60 + m) - (START_HOUR * 60);
@@ -80,51 +86,62 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
   };
 
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-500 overflow-hidden">
+    <div className="flex flex-col h-full bg-white animate-in fade-in duration-500 overflow-hidden font-sans">
       
-      {/* CABEÇALHO DA AGENDA ULTRA COMPACTO */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 md:mb-4 gap-2 px-1">
-        <div className="flex items-center gap-2">
-          <div className="bg-[#b5967a] p-1.5 rounded-md text-white shadow-sm">
-            <CalendarIcon size={14} />
-          </div>
-          <div>
-            <h3 className="text-white font-bold text-xs md:text-base uppercase tracking-tight leading-none">Vista Semanal</h3>
-            <p className="text-[#d4bca9] text-[8px] md:text-[10px] font-black uppercase tracking-widest">{weekRangeLabel}</p>
+      {/* HEADER ULTRA CLEAN */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border-b border-stone-100 bg-white gap-3">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setViewDate(new Date())} 
+            className="px-4 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-lg transition-colors"
+          >
+            Hoje
+          </button>
+          <div className="flex items-center bg-stone-50 rounded-lg border border-stone-100">
+            <button onClick={() => changeWeek(-1)} className="p-2 hover:bg-stone-200 rounded-l-lg text-stone-500 transition-colors border-r border-stone-100"><ChevronLeft size={16}/></button>
+            <span className="px-4 text-[11px] font-bold text-stone-600 uppercase tracking-wider">{weekRangeLabel}</span>
+            <button onClick={() => changeWeek(1)} className="p-2 hover:bg-stone-200 rounded-r-lg text-stone-500 transition-colors"><ChevronRight size={16}/></button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between sm:justify-start bg-stone-900 border border-white/5 p-0.5 rounded-lg w-full sm:w-auto">
-          <button onClick={() => changeWeek(-1)} className="p-1.5 hover:bg-stone-800 rounded-md text-stone-400"><ChevronLeft size={16}/></button>
-          <button onClick={() => setViewDate(new Date())} className="px-3 py-1 text-[8px] font-black text-stone-300 hover:text-[#b5967a] uppercase tracking-tighter">HOJE</button>
-          <button onClick={() => changeWeek(1)} className="p-1.5 hover:bg-stone-800 rounded-md text-stone-400"><ChevronRight size={16}/></button>
+        <div className="hidden sm:flex items-center gap-2">
+           <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-3 border-r border-stone-100">Vista Semanal</span>
+           <Settings size={16} className="text-stone-400 cursor-pointer hover:text-stone-600" />
         </div>
       </div>
 
       {/* ÁREA DA GRADE EXPANDIDA */}
-      <div className="flex-1 overflow-auto rounded-xl border border-white/5 bg-stone-950 shadow-2xl relative scrollbar-thin scrollbar-thumb-stone-800">
-        <div className="min-w-[650px] md:min-w-[900px] relative">
+      <div className="flex-1 overflow-auto bg-[#F9FAFB] relative scrollbar-thin scrollbar-thumb-stone-200">
+        <div className="min-w-[800px] md:min-w-[1100px] relative bg-white">
           
-          {/* DIAS DA SEMANA - MAIS CURTOS */}
-          <div className="sticky top-0 z-30 grid grid-cols-[50px_1fr_1fr_1fr_1fr_1fr_1fr] md:grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr] bg-stone-900 border-b border-white/10">
-            <div className="p-1 border-r border-white/5 bg-stone-900"></div>
+          {/* CABEÇALHO DOS DIAS - STICKY */}
+          <div className="sticky top-0 z-30 grid grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr] bg-white border-b border-stone-100">
+            <div className="bg-stone-50/50 border-r border-stone-100"></div>
             {weekDays.map((day, i) => {
               const isToday = day.toDateString() === new Date().toDateString();
               return (
-                <div key={i} className={`p-1.5 md:p-3 text-center border-r border-white/5 last:border-0 ${isToday ? 'bg-[#b5967a]/5' : ''}`}>
-                  <p className="text-[7px] md:text-[9px] font-black text-stone-500 uppercase mb-0">{day.toLocaleDateString('pt-PT', { weekday: 'short' })}</p>
-                  <p className={`text-sm md:text-lg font-serif font-bold ${isToday ? 'text-[#b5967a]' : 'text-white'}`}>{day.getDate()}</p>
+                <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isToday ? 'bg-stone-50' : ''}`}>
+                  <p className={`text-[10px] font-bold uppercase mb-1 ${isToday ? 'text-[#b5967a]' : 'text-stone-400'}`}>
+                    {day.toLocaleDateString('pt-PT', { weekday: 'short' })}
+                  </p>
+                  <p className={`text-xl font-medium ${isToday ? 'text-white bg-[#b5967a] w-9 h-9 flex items-center justify-center rounded-full mx-auto' : 'text-stone-700'}`}>
+                    {day.getDate()}
+                  </p>
                 </div>
               );
             })}
           </div>
 
-          <div className="relative grid grid-cols-[50px_1fr_1fr_1fr_1fr_1fr_1fr] md:grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr]">
+          <div className="relative grid grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr]">
             
-            {/* HORAS LATERAIS - STICKY */}
-            <div className="bg-stone-900/90 border-r border-white/5 sticky left-0 z-20 backdrop-blur-sm shadow-xl">
+            {/* HORAS LATERAIS - STICKY LEFT */}
+            <div className="bg-white border-r border-stone-100 sticky left-0 z-20">
               {hours.map(hour => (
-                <div key={hour} className="text-right pr-2 text-[8px] md:text-[9px] font-bold text-stone-600 border-b border-white/[0.03]" style={{ height: `${HOUR_HEIGHT}px`, lineHeight: `${HOUR_HEIGHT}px` }}>
+                <div 
+                  key={hour} 
+                  className="text-right pr-3 text-[10px] font-medium text-stone-400 border-b border-stone-50" 
+                  style={{ height: `${HOUR_HEIGHT}px`, lineHeight: `${HOUR_HEIGHT}px` }}
+                >
                   {hour.toString().padStart(2, '0')}:00
                 </div>
               ))}
@@ -137,42 +154,46 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
               const dayBlocks = timeBlocks.filter(b => isBlockActiveOnDay(b, day));
 
               return (
-                <div key={colIdx} className="relative border-r border-white/[0.05] last:border-0">
+                <div key={colIdx} className="relative border-r border-stone-100 last:border-0 bg-white">
+                  {/* Linhas horizontais leves */}
                   {hours.map(h => (
-                    <div key={h} className="border-b border-white/[0.02]" style={{ height: `${HOUR_HEIGHT}px` }} />
+                    <div key={h} className="border-b border-stone-50" style={{ height: `${HOUR_HEIGHT}px` }} />
                   ))}
 
-                  {/* BLOQUEIOS COMPACTOS */}
+                  {/* BLOQUEIOS (CAMADA INFERIOR) */}
                   {dayBlocks.map(block => {
                     const { top } = getTimeData(block.startTime);
                     const height = calculateHeight(block.startTime, block.endTime);
                     return (
-                      <div key={block.id} className="absolute left-0 right-0 z-10 bg-stone-800/40 border-y border-white/5 flex items-center justify-center overflow-hidden pointer-events-none" style={{ top: `${top}px`, height: `${height}px` }}>
-                        <Lock size={8} className="text-white opacity-10" />
+                      <div
+                        key={block.id}
+                        className="absolute left-0 right-0 z-10 bg-stone-50/80 border-y border-stone-100 flex items-center justify-center overflow-hidden pointer-events-none"
+                        style={{ top: `${top}px`, height: `${height}px` }}
+                      >
+                        <Lock size={12} className="text-stone-300" />
                       </div>
                     );
                   })}
 
-                  {/* AGENDAMENTOS COMPACTOS */}
+                  {/* AGENDAMENTOS (ESTILO FRESHA) */}
                   {dayAppointments.map(app => {
                     const { top } = getTimeData(app.startTime);
                     const height = calculateHeight(app.startTime, app.endTime);
+                    const colorClasses = getServiceColor(app.serviceName);
+
                     return (
                       <div
                         key={app.id}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditAppointment(app); }}
-                        className="absolute left-0.5 right-0.5 z-40 rounded-lg bg-stone-900 border-l-[3px] border-[#b5967a] p-1 shadow-xl ring-1 ring-white/5 hover:bg-stone-800 transition-all cursor-pointer group/card select-none"
-                        style={{ top: `${top + 1}px`, height: `${height - 2}px` }}
+                        className={`absolute left-1 right-1 z-40 rounded-md border-l-[4px] p-2 shadow-sm transition-all cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-95 group overflow-hidden ${colorClasses}`}
+                        style={{ top: `${top + 2}px`, height: `${height - 4}px` }}
                       >
-                        <div className="flex flex-col h-full overflow-hidden pointer-events-none">
-                          <div className="flex justify-between items-center mb-0.5">
-                            <span className="text-[7px] md:text-[8px] font-black text-[#b5967a] uppercase leading-none tracking-tighter">{app.startTime}</span>
-                            <Heart size={7} className="text-stone-700 shrink-0" />
+                        <div className="flex flex-col h-full pointer-events-none">
+                          <div className="flex justify-between items-start">
+                             <p className="text-[11px] font-bold truncate leading-tight">{app.clientName}</p>
+                             <p className="text-[9px] font-medium opacity-70 whitespace-nowrap">{app.startTime}</p>
                           </div>
-                          <p className="text-[9px] md:text-[11px] font-bold text-white truncate leading-none mb-0.5">{app.clientName}</p>
-                          {height > 35 && (
-                            <p className="text-[7px] md:text-[9px] text-stone-500 font-medium truncate leading-none uppercase">{app.serviceName}</p>
-                          )}
+                          <p className="text-[9px] font-medium truncate mt-0.5 opacity-80">{app.serviceName}</p>
                         </div>
                       </div>
                     );
@@ -184,15 +205,19 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* LEGENDA SLIM */}
-      <div className="mt-2 flex gap-4 px-2">
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#b5967a]"></div>
-          <span className="text-[8px] font-black text-stone-600 uppercase">Marcações</span>
+      {/* LEGENDA SLIM NO RODAPÉ */}
+      <div className="p-3 bg-white border-t border-stone-100 flex gap-6 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-3 h-3 rounded bg-rose-100 border border-rose-200"></div>
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Manicure Gel</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-stone-800"></div>
-          <span className="text-[8px] font-black text-stone-600 uppercase tracking-tighter">Bloqueios</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-3 h-3 rounded bg-amber-100 border border-amber-200"></div>
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Alongamento</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-3 h-3 rounded bg-emerald-100 border border-emerald-200"></div>
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Pedicure</span>
         </div>
       </div>
     </div>
