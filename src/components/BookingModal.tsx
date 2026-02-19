@@ -28,30 +28,30 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [formData, setFormData] = useState({ name: '', phone: '' });
 
-  // 1. Resetar ao fechar
+  // 1. Resetar ao fechar (Segurança para não prender o estado)
   useEffect(() => {
     if (!isOpen) {
-      setStep(1); setSelectedService(null); setSelectedDate("");
-      setSelectedTime(""); setFormData({ name: '', phone: '' });
+      setStep(1); 
+      setSelectedService(null); 
+      setSelectedDate("");
+      setSelectedTime(""); 
+      setFormData({ name: '', phone: '' });
     }
   }, [isOpen]);
 
-  // 2. Escutar Dados Globais (Multi-tenant path fix)
+  // 2. Escutar Dados Globais (Multi-tenant)
   useEffect(() => {
     if (isOpen) {
       setLoadingData(true);
       
-      // Escutar Serviços do Cliente específico
       const unsubServ = onSnapshot(query(collection(db, "businesses", CLIENT_ID, "services"), orderBy("name", "asc")), (snap) => {
         setDbServices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Service)));
       });
 
-      // Escutar Horário de Trabalho do Cliente específico
       const unsubConfig = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "work-schedule"), (snap) => {
         if (snap.exists()) setWorkConfig(snap.data() as WorkConfig);
       });
 
-      // Escutar Bloqueios Manuais do Cliente específico
       const unsubBlocks = onSnapshot(collection(db, "businesses", CLIENT_ID, "timeBlocks"), (snap) => {
         setTimeBlocks(snap.docs.map(d => ({ id: d.id, ...d.data() } as TimeBlock)));
       });
@@ -61,7 +61,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // 3. Buscar Agendamentos Ocupados (Multi-tenant path fix)
+  // 3. Buscar Agendamentos Ocupados
   useEffect(() => {
     if (selectedDate && isOpen) {
       const fetchBookings = async () => {
@@ -83,6 +83,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
     }
   }, [selectedDate, isOpen]);
 
+  // REGRA DE OURO: Se não estiver aberto, o componente é destruído para libertar o ecrã
   if (!isOpen) return null;
 
   // --- MOTOR LÓGICO DE FILTRAGEM ---
@@ -184,10 +185,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 text-left font-sans">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 text-left font-sans">
+      {/* OVERLAY ESFUMADO FIXO */}
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
       
-      <div className="relative bg-stone-900 border border-[#b5967a]/30 w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="relative bg-stone-900 border border-[#b5967a]/30 w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-300 z-[160]">
         
         {/* Header - Nude & Gold Style */}
         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-stone-900/50">
@@ -198,7 +200,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
           <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-stone-500 hover:text-white transition-colors"><X size={24} /></button>
         </div>
 
-        <div className="p-6 max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-800">
+        <div className="p-6 max-h-[75vh] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-800">
           
           {/* STEP 1: Seleção de Serviços */}
           {step === 1 && (
