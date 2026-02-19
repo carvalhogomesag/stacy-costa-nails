@@ -4,7 +4,7 @@ import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   Instagram, Facebook, Music2, Camera, Link, Globe, 
-  AlertTriangle, Loader2, Save, Upload, CheckCircle2 
+  AlertTriangle, Loader2, Save, Upload, MapPin 
 } from 'lucide-react';
 import { CLIENT_ID } from '../../constants';
 import { SocialLinks } from '../../types';
@@ -16,28 +16,37 @@ const DashboardDesign: React.FC = () => {
     instagram: '', facebook: '', tiktok: '', whatsapp: ''
   });
   const [gallery, setGallery] = useState<string[]>(Array(8).fill(''));
+  
+  // NOVO ESTADO: Endereço para o Google Maps
+  const [mapAddress, setMapAddress] = useState('');
 
-  // Carregar dados existentes
+  // Carregar dados existentes do Firestore
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "metadata"), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         if (data.socialLinks) setSocialLinks(data.socialLinks);
         if (data.galleryUrls) setGallery(data.galleryUrls);
+        if (data.mapAddress) setMapAddress(data.mapAddress);
       }
     });
     return () => unsub();
   }, []);
 
-  const handleSaveSocials = async () => {
+  // Guardar Redes Sociais e Endereço do Mapa
+  const handleSaveMetadata = async () => {
     setLoading(true);
     try {
       await setDoc(doc(db, "businesses", CLIENT_ID, "config", "metadata"), {
         socialLinks,
+        mapAddress, // Guardando o endereço digitado
         updatedAt: serverTimestamp()
       }, { merge: true });
-      alert("Redes Sociais atualizadas!");
-    } catch (e) { alert("Erro ao salvar."); }
+      alert("Configurações atualizadas com sucesso!");
+    } catch (e) { 
+      console.error(e);
+      alert("Erro ao salvar dados."); 
+    }
     setLoading(false);
   };
 
@@ -45,7 +54,6 @@ const DashboardDesign: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validar formato (Aviso ao cliente)
     if (!file.type.includes('webp')) {
       alert("Por favor, use apenas imagens no formato .webp para garantir a velocidade do site.");
       return;
@@ -53,16 +61,10 @@ const DashboardDesign: React.FC = () => {
 
     setUploadingIdx(index);
     try {
-      // Caminho no Storage organizado por CLIENT_ID
       const storageRef = ref(storage, `businesses/${CLIENT_ID}/gallery/slot_${index}.webp`);
-      
-      // Fazer o upload
       await uploadBytes(storageRef, file);
-      
-      // Obter o link público
       const downloadURL = await getDownloadURL(storageRef);
 
-      // Atualizar o Firestore
       const newGallery = [...gallery];
       newGallery[index] = downloadURL;
       
@@ -80,69 +82,87 @@ const DashboardDesign: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4">
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 font-sans">
       <div className="grid lg:grid-cols-2 gap-8">
         
-        {/* Redes Sociais - Paleta Nude/Gold */}
+        {/* Redes Sociais e Mapa - Paleta Nude/Gold */}
         <div className="bg-stone-900 border border-[#b5967a]/20 p-8 rounded-[3rem] shadow-2xl space-y-6">
           <h3 className="text-white font-bold flex items-center gap-3 text-lg">
-            <Globe className="text-[#b5967a]"/> Redes Sociais
+            <Globe className="text-[#b5967a]"/> Localização e Redes
           </h3>
           
           <div className="space-y-4">
-            <div className="relative">
-              <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5967a]" size={18} />
-              <input 
-                placeholder="Link Instagram"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-[#b5967a] transition-all"
-                value={socialLinks.instagram}
-                onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})}
-              />
+            {/* INPUT DO GOOGLE MAPS */}
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest">Ponto no Google Maps</label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1-2 text-[#b5967a]" size={18} />
+                <input 
+                  placeholder="Ex: Stacy Costa Nails Algés"
+                  className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-[#b5967a] transition-all"
+                  value={mapAddress}
+                  onChange={e => setMapAddress(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="relative">
-              <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5967a]" size={18} />
-              <input 
-                placeholder="Link Facebook"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-[#b5967a] transition-all"
-                value={socialLinks.facebook}
-                onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})}
-              />
+
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest">Instagram</label>
+              <div className="relative">
+                <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5967a]" size={18} />
+                <input 
+                  placeholder="Link do perfil"
+                  className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-[#b5967a] transition-all"
+                  value={socialLinks.instagram}
+                  onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})}
+                />
+              </div>
             </div>
-            <div className="relative">
-              <Music2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5967a]" size={18} />
-              <input 
-                placeholder="Link TikTok"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-[#b5967a] transition-all"
-                value={socialLinks.tiktok}
-                onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})}
-              />
+
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest">Facebook</label>
+              <div className="relative">
+                <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5967a]" size={18} />
+                <input 
+                  placeholder="Link da página"
+                  className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-[#b5967a] transition-all"
+                  value={socialLinks.facebook}
+                  onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})}
+                />
+              </div>
             </div>
+
             <button 
-              onClick={handleSaveSocials}
+              onClick={handleSaveMetadata}
               disabled={loading}
-              className="w-full py-4 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-2xl transition-all flex justify-center items-center gap-2 shadow-xl shadow-[#b5967a]/10"
+              className="w-full py-5 mt-4 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-2xl transition-all flex justify-center items-center gap-2 shadow-xl shadow-[#b5967a]/10 active:scale-95"
             >
-              {loading ? <Loader2 className="animate-spin" /> : <><Save size={18}/> Guardar Redes Sociais</>}
+              {loading ? <Loader2 className="animate-spin" /> : <><Save size={18}/> Guardar Configurações</>}
             </button>
           </div>
         </div>
 
-        {/* Info Box Stylizada */}
-        <div className="bg-[#b5967a]/5 border border-[#b5967a]/20 p-8 rounded-[3rem] flex flex-col justify-center items-center text-center space-y-4">
-          <div className="w-16 h-16 bg-[#b5967a]/10 rounded-full flex items-center justify-center text-[#b5967a]">
-            <AlertTriangle size={32} />
+        {/* Info Box sobre como funciona o Mapa */}
+        <div className="bg-[#b5967a]/5 border border-[#b5967a]/20 p-8 rounded-[3rem] flex flex-col justify-center items-center text-center space-y-6">
+          <div className="w-20 h-20 bg-[#b5967a]/10 rounded-full flex items-center justify-center text-[#b5967a] shadow-inner">
+            <MapPin size={40} />
           </div>
-          <h4 className="text-white font-bold text-lg">Gestão de Imagens Profissional</h4>
-          <p className="text-stone-400 text-sm leading-relaxed max-w-xs">
-            Personalize a sua galeria clicando nos slots abaixo. Lembre-se que as imagens devem estar em formato <b>.webp</b> para manter o site rápido.
-          </p>
+          <div className="space-y-2">
+            <h4 className="text-white font-bold text-xl tracking-tight">Mapa Automático</h4>
+            <p className="text-stone-400 text-sm leading-relaxed max-w-xs">
+              Não precisa de tirar fotos ao mapa. Basta escrever o <b>nome do seu negócio</b> ou a <b>morada completa</b> e o site gera o mapa interativo para o cliente navegar.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-[#d4bca9] text-[10px] font-black uppercase tracking-widest bg-stone-900/50 px-4 py-2 rounded-full border border-white/5">
+            <AlertTriangle size={14} /> Sistema WaaS Ativo
+          </div>
         </div>
       </div>
 
-      {/* Galeria de Fotos Real com Slots Dourados */}
+      {/* Galeria de Fotos */}
       <div className="bg-stone-900 border border-[#b5967a]/20 p-8 rounded-[3rem] shadow-2xl">
-        <h3 className="text-white font-bold flex items-center gap-3 text-lg mb-8">
-          <Camera className="text-[#b5967a]"/> A Sua Galeria (8 Slots)
+        <h3 className="text-white font-bold flex items-center gap-3 text-lg mb-8 uppercase tracking-widest">
+          <Camera className="text-[#b5967a]"/> Portfolio (8 Slots)
         </h3>
         
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -159,9 +179,9 @@ const DashboardDesign: React.FC = () => {
                 <div className="aspect-[4/5] bg-stone-950 border border-dashed border-white/10 rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-2 hover:border-[#b5967a]/50 transition-all relative">
                   {url ? (
                     <>
-                      <img src={url} alt={`Slot ${idx + 1}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                      <img src={url} alt={`Trabalho ${idx + 1}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                         <div className="bg-[#b5967a] p-3 rounded-full text-white shadow-2xl">
+                         <div className="bg-[#b5967a] p-3 rounded-full text-white shadow-2xl scale-110">
                             <Upload size={20} />
                          </div>
                       </div>
@@ -173,7 +193,6 @@ const DashboardDesign: React.FC = () => {
                     </>
                   )}
 
-                  {/* Feedback de Upload Individual */}
                   {uploadingIdx === idx && (
                     <div className="absolute inset-0 bg-stone-950/80 flex items-center justify-center backdrop-blur-sm">
                       <Loader2 className="animate-spin text-[#b5967a]" size={32} />

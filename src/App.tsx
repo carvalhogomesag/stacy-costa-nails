@@ -19,9 +19,6 @@ import AdminDashboard from './components/AdminDashboard';
 // DADOS E CONSTANTES
 import { BUSINESS_INFO, REVIEWS, PLACEHOLDER_IMG, CLIENT_ID } from './constants';
 import { Service, SocialLinks } from './types';
-import mapaImg from './assets/images/mapa-localizacao.webp'; 
-
-const MAP_SOURCE = mapaImg;
 
 const App: React.FC = () => {
   // --- ESTADOS DE CONTROLO ---
@@ -33,10 +30,11 @@ const App: React.FC = () => {
   const [dynamicServices, setDynamicServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   
-  // Metadados Visuais (Redes Sociais e Fotos do Firestore)
+  // Metadados Visuais (Redes Sociais, Galeria e Endereço do Mapa)
   const [visualMetadata, setVisualMetadata] = useState<{
     socialLinks?: SocialLinks;
     galleryUrls?: string[];
+    mapAddress?: string;
   }>({});
 
   // 1. ESCUTAR SERVIÇOS DO FIREBASE (Multi-tenant)
@@ -58,7 +56,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. ESCUTAR METADADOS (Redes Sociais e Galeria da Nuvem)
+  // 2. ESCUTAR METADADOS (Redes Sociais, Galeria e Mapa da Nuvem)
   useEffect(() => {
     const unsubMetadata = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "metadata"), (snap) => {
       if (snap.exists()) {
@@ -68,8 +66,7 @@ const App: React.FC = () => {
     return () => unsubMetadata();
   }, []);
 
-  // FUNÇÃO DE IMAGEM 100% DINÂMICA
-  // Removeu-se a dependência da pasta public/images/
+  // Função de imagem dinâmica com Placeholders
   const getImg = (index: number) => {
     if (visualMetadata.galleryUrls && visualMetadata.galleryUrls[index]) {
       return visualMetadata.galleryUrls[index];
@@ -77,8 +74,22 @@ const App: React.FC = () => {
     return PLACEHOLDER_IMG;
   };
 
+  // Gerar URL do Iframe do Google Maps
+  const getMapIframeUrl = () => {
+    const address = visualMetadata.mapAddress || `${BUSINESS_INFO.address}, ${BUSINESS_INFO.city}`;
+    return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  };
+
+  // Gerar Link Externo para o Botão do Maps
+  const getExternalMapUrl = () => {
+    if (visualMetadata.mapAddress) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(visualMetadata.mapAddress)}`;
+    }
+    return BUSINESS_INFO.googleMapsUrl;
+  };
+
   return (
-    // TEMA: Nude, Bege e Champagne (Inspirado nas fotos da Stacy)
+    // TEMA: Nude, Bege e Champagne (Stacy Costa Nails)
     <div className="min-h-screen flex flex-col selection:bg-[#d4bca9] selection:text-[#4a3f35] bg-[#fdfbf7]">
       
       <Navbar onAdminClick={() => setIsAdminLoginOpen(true)} />
@@ -109,8 +120,7 @@ const App: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-[#1a1714]/80 to-[#1a1714]"></div> 
         </div>
 
-        <div className="container mx-auto px-4 relative z-10 pt-24">
-          <div className="max-w-4xl mx-auto text-center">
+        <div className="container mx-auto px-4 relative z-10 pt-24 text-center">
             <div className="inline-flex items-center gap-2 bg-[#b5967a]/10 border border-[#b5967a]/20 px-5 py-2 rounded-full mb-8 animate-fade-in text-[#d4bca9]">
               <Star size={14} fill="currentColor" />
               <span className="text-xs font-bold uppercase tracking-[0.3em]">Nail Artist Premium em Algés</span>
@@ -132,14 +142,13 @@ const App: React.FC = () => {
               >
                 Marcar Experiência <ArrowRight className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <a href="#servicos" className="bg-white/5 border border-white/10 text-white px-10 py-5 rounded-full text-lg font-bold hover:bg-white/10 transition-all shadow-sm">Consultar Menu</a>
+              <a href="#servicos" className="bg-white/5 border border-white/10 text-white px-10 py-5 rounded-full text-lg font-bold hover:bg-white/10 transition-all shadow-sm text-center">Consultar Menu</a>
             </div>
-          </div>
         </div>
       </section>
 
       {/* HIGHLIGHTS */}
-      <section className="py-16 md:py-24 bg-white relative overflow-hidden">
+      <section className="py-16 md:py-24 bg-white relative overflow-hidden text-center">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-12">
             {[
@@ -147,7 +156,7 @@ const App: React.FC = () => {
               { icon: Users, title: "Atendimento Exclusivo", text: "Uma experiência personalizada e acolhedora, onde tu és a nossa prioridade." },
               { icon: Sparkles, title: "Durabilidade Surreal", text: "Técnicas avançadas de gel e alongamento para unhas perfeitas por semanas." }
             ].map((item, index) => (
-              <div key={index} className="flex flex-col items-center text-center group">
+              <div key={index} className="flex flex-col items-center group">
                 <div className="w-20 h-20 bg-[#fdfbf7] border border-[#e5dcd3] rounded-full flex items-center justify-center text-[#b5967a] mb-6 group-hover:scale-110 transition-transform shadow-sm">
                   <item.icon size={32} />
                 </div>
@@ -191,7 +200,7 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* SOBRE - Usa Foto do Slot 5 (Index 4) */}
+      {/* SOBRE */}
       <section id="sobre" className="py-20 md:py-32 bg-white overflow-hidden text-left">
         <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative">
@@ -200,7 +209,7 @@ const App: React.FC = () => {
               </div>
               <div className="absolute -bottom-8 -left-8 bg-[#4a3f35] text-white p-10 rounded-3xl max-w-xs shadow-2xl z-20 hidden md:block border border-white/10">
                 <Quote className="text-[#b5967a] mb-4" size={32} />
-                <p className="font-medium italic text-lg leading-snug">"{REVIEWS[0].text}"</p>
+                <p className="font-medium italic text-lg leading-snug">"O brio e o perfeccionismo são as marcas de cada trabalho que realizo."</p>
                 <p className="text-[#b5967a] text-xs mt-6 uppercase font-bold tracking-widest">{BUSINESS_INFO.owner}</p>
               </div>
             </div>
@@ -222,8 +231,8 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* GALERÍA / PORTFOLIO - Usa Slots 1 a 8 dinamicamente */}
-      <section className="py-20 md:py-24 bg-[#fdfbf7]">
+      {/* PORTFOLIO */}
+      <section className="py-20 md:py-24 bg-[#fdfbf7] text-center">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
              <h2 className="font-serif text-3xl md:text-5xl font-bold text-[#4a3f35] mb-4 italic tracking-tight">O Meu Portfolio</h2>
@@ -241,8 +250,7 @@ const App: React.FC = () => {
               </div>
             ))}
 
-            {/* CARD SOCIAL DINÂMICO */}
-            <div className="bg-[#4a3f35] aspect-[3/4] rounded-3xl flex flex-col items-center justify-center p-8 text-center group break-inside-avoid shadow-xl">
+            <div className="bg-[#4a3f35] aspect-[3/4] rounded-3xl flex flex-col items-center justify-center p-8 shadow-xl">
               <Camera size={32} className="text-[#b5967a] mb-6 group-hover:scale-110 transition-transform" />
               <h4 className="text-white font-black text-xl leading-tight mb-6 uppercase">Acompanha-nos</h4>
               
@@ -263,7 +271,7 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* SEÇÃO DO ESPAÇO - Usa Fotos dos Slots 6, 7 e 8 (Index 5, 6, 7) */}
+      {/* ESPAÇO */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-16 items-center">
@@ -282,13 +290,13 @@ const App: React.FC = () => {
                 </div>
              </div>
              <div className="order-1 md:order-2 h-80 md:h-[550px] rounded-[4rem] overflow-hidden shadow-2xl border-[12px] border-[#fdfbf7]">
-                <img src={getImg(7)} alt="Interior Stacy Costa Nails" className="w-full h-full object-cover" />
+                <img src={getImg(7)} alt="Interior" className="w-full h-full object-cover" />
              </div>
           </div>
         </div>
       </section>
 
-      {/* CONTACTO */}
+      {/* CONTACTO COM MAPA DINÂMICO */}
       <section id="contacto" className="py-20 md:py-32 bg-[#fdfbf7] text-left">
         <div className="container mx-auto px-4 grid lg:grid-cols-12 gap-16">
           <div className="lg:col-span-5 space-y-12">
@@ -314,13 +322,31 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
+
           <div className="lg:col-span-7 h-[500px] md:h-[600px] rounded-[4rem] overflow-hidden border-[10px] border-white shadow-2xl relative group">
-            <a href={BUSINESS_INFO.googleMapsUrl} target="_blank" rel="noreferrer" className="block w-full h-full relative">
-              <img src={MAP_SOURCE} alt="Mapa Algés" className="w-full h-full object-cover grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
-              <div className="absolute inset-0 flex items-center justify-center bg-[#4a3f35]/5 group-hover:bg-transparent transition-all">
-                <div className="bg-[#b5967a] text-white px-10 py-5 rounded-full font-bold shadow-2xl uppercase tracking-widest text-sm active:scale-95 transition-all">Abrir Google Maps</div>
-              </div>
-            </a>
+            {/* IFRAME INTERATIVO DO GOOGLE MAPS */}
+            <iframe 
+              src={getMapIframeUrl()} 
+              width="100%" 
+              height="100%" 
+              style={{ border: 0, filter: 'grayscale(0.3) contrast(1.1)' }} 
+              allowFullScreen={true} 
+              loading="lazy" 
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Google Maps"
+              className="grayscale-[0.3] hover:grayscale-0 transition-all duration-700"
+            />
+            
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <a 
+                href={getExternalMapUrl()} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="bg-[#b5967a] text-white px-10 py-5 rounded-full font-bold shadow-2xl uppercase tracking-widest text-sm active:scale-95 transition-all block whitespace-nowrap"
+              >
+                Abrir no Google Maps
+              </a>
+            </div>
           </div>
         </div>
       </section>
