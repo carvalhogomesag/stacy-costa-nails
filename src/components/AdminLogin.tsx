@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Lock, Mail, X, Loader2, Scissors } from 'lucide-react';
+import { Lock, Mail, X, Loader2, Heart } from 'lucide-react';
 import { BUSINESS_INFO } from '../constants';
 
 interface AdminLoginProps {
@@ -38,17 +38,17 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ isOpen, onClose, onLoginSuccess
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
       
-      <div className="relative bg-stone-900 border border-emerald-900/30 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-300">
-        <button onClick={onClose} className="absolute top-6 right-6 text-stone-500 hover:text-white">
+      <div className="relative bg-stone-900 border border-[#b5967a]/30 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-300">
+        <button onClick={onClose} className="absolute top-6 right-6 text-stone-500 hover:text-white transition-colors">
           <X size={24} />
         </button>
 
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-emerald-900/40">
-            <Scissors size={32} />
+          <div className="w-16 h-16 bg-[#b5967a] rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-[#b5967a]/20">
+            <Heart size={32} fill="currentColor" />
           </div>
-          <h2 className="text-2xl font-serif text-white font-bold uppercase tracking-tight">Acesso de Gestão</h2>
-          <p className="text-emerald-500 text-xs mt-2 font-bold uppercase tracking-widest">{BUSINESS_INFO.name} {BUSINESS_INFO.subName}</p>
+          <h2 className="text-2xl font-serif text-white font-bold uppercase tracking-tight">Gestão de Estética</h2>
+          <p className="text-[#d4bca9] text-xs mt-2 font-bold uppercase tracking-widest">{BUSINESS_INFO.name} {BUSINESS_INFO.subName}</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -60,11 +60,11 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ isOpen, onClose, onLoginSuccess
 
           <div className="space-y-4">
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" size={18} />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5967a]" size={18} />
               <input 
                 type="email" 
                 placeholder="Email do administrador"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-emerald-500/50 transition-all font-medium"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-[#b5967a] transition-all font-medium placeholder:text-stone-700"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -72,11 +72,11 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ isOpen, onClose, onLoginSuccess
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" size={18} />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5967a]" size={18} />
               <input 
                 type="password" 
                 placeholder="Palavra-passe"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-emerald-500/50 transition-all font-medium"
+                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-[#b5967a] transition-all font-medium placeholder:text-stone-700"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -87,14 +87,14 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ isOpen, onClose, onLoginSuccess
           <button 
             type="submit"
             disabled={loading}
-            className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-emerald-900/20 flex justify-center items-center gap-2 uppercase tracking-widest active:scale-[0.98]"
+            className="w-full py-5 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-2xl transition-all shadow-xl shadow-[#b5967a]/10 flex justify-center items-center gap-2 uppercase tracking-[0.2em] text-xs active:scale-[0.98]"
           >
             {loading ? <Loader2 className="animate-spin" /> : "Entrar no Painel"}
           </button>
         </form>
 
-        <p className="text-center text-stone-600 text-[10px] mt-8 uppercase tracking-[0.4em] font-bold">
-          Sistema de Gestão Allan Dev v2.0
+        <p className="text-center text-stone-600 text-[10px] mt-8 uppercase tracking-[0.5em] font-bold">
+          Sistema Premium • Allan Dev v3.0
         </p>
       </div>
     </div>
