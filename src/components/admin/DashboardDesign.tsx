@@ -56,17 +56,26 @@ const DashboardDesign: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.includes('webp')) {
-      alert("Por favor, utilize apenas imagens no formato .webp para garantir a performance do site.");
+    // 1. VALIDAÇÃO FLEXÍVEL: Aceita JPG, PNG e WEBP
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Formato inválido. Por favor, utilize imagens JPG, PNG ou WEBP.");
       return;
     }
 
     setUploadingIdx(index);
     try {
-      const storageRef = ref(storage, `businesses/${CLIENT_ID}/gallery/slot_${index}.webp`);
+      // 2. EXTRAIR A EXTENSÃO REAL DO FICHEIRO
+      const extension = file.name.split('.').pop() || 'jpg';
+      
+      // Caminho no Storage organizado por CLIENT_ID com a extensão correta
+      const storageRef = ref(storage, `businesses/${CLIENT_ID}/gallery/slot_${index}.${extension}`);
+      
+      // Fazer o upload
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 
+      // Atualizar o Firestore
       const newGallery = [...gallery];
       newGallery[index] = downloadURL;
       
@@ -78,7 +87,7 @@ const DashboardDesign: React.FC = () => {
       setGallery(newGallery);
     } catch (error) {
       console.error(error);
-      alert("Erro no upload da imagem.");
+      alert("Erro no upload da imagem. Tente novamente.");
     }
     setUploadingIdx(null);
   };
@@ -102,7 +111,7 @@ const DashboardDesign: React.FC = () => {
           </h3>
           
           <div className="space-y-5">
-            {/* INPUT GOOGLE MAPS */}
+            {/* INPUT GOOGLE MAPS COM INSTRUÇÃO */}
             <div className="space-y-3">
               <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest flex items-center gap-2">
                 <MapPin size={12} className="text-[#b5967a]" /> Ponto no Google Maps
@@ -116,7 +125,7 @@ const DashboardDesign: React.FC = () => {
               <div className="flex gap-2 px-2">
                 <Info size={14} className="text-[#b5967a] shrink-0 mt-0.5" />
                 <p className="text-[11px] text-stone-500 leading-relaxed italic">
-                  Escreva o nome comercial registado no Google ou a morada completa. O mapa à direita irá mostrar o resultado em tempo real.
+                  Escreva o nome comercial registado no Google ou a morada completa (Rua, Número e Localidade). O mapa à direita irá mostrar o resultado em tempo real.
                 </p>
               </div>
             </div>
@@ -169,11 +178,11 @@ const DashboardDesign: React.FC = () => {
               <MapPin size={16} className="text-[#b5967a]" /> Pré-visualização do Mapa
             </h4>
             <div className="px-3 py-1 rounded-full bg-[#b5967a]/10 border border-[#b5967a]/20 text-[#b5967a] text-[9px] font-black uppercase tracking-tighter">
-              Em Tempo Real
+              Ao vivo
             </div>
           </div>
           
-          <div className="flex-1 bg-stone-950 min-h-[350px] relative">
+          <div className="flex-1 bg-stone-950 min-h-[300px] relative">
             <iframe 
               src={getMapIframeUrl()} 
               width="100%" 
@@ -196,7 +205,7 @@ const DashboardDesign: React.FC = () => {
           </h3>
           <div className="flex items-center gap-2 text-stone-500 bg-stone-950 px-4 py-2 rounded-full border border-white/5">
             <AlertTriangle size={14} className="text-[#b5967a]" />
-            <span className="text-[10px] font-bold uppercase">Apenas ficheiros .webp</span>
+            <span className="text-[10px] font-bold uppercase">Formatos: JPG, PNG, WEBP</span>
           </div>
         </div>
         
@@ -214,9 +223,10 @@ const DashboardDesign: React.FC = () => {
                     </div>
                   )}
 
+                  {/* 3. HTML ATUALIZADO: Agora permite jpg, jpeg e png na janela de seleção do Windows/Mac */}
                   <input 
                     type="file" 
-                    accept="image/webp" 
+                    accept="image/webp, image/jpeg, image/png" 
                     className="hidden" 
                     onChange={(e) => handleFileUpload(e, idx)}
                     disabled={uploadingIdx !== null}
