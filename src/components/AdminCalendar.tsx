@@ -15,13 +15,26 @@ interface AdminCalendarProps {
 }
 
 const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, onEditAppointment }) => {
-  const [viewDate, setViewDate] = useState(new Date());
+  // Inicializa sempre com a data de hoje sem horas (normalizada)
+  const [viewDate, setViewDate] = useState(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now;
+  });
 
   // --- CONFIGURAÇÃO DA GRADE ---
   const HOUR_HEIGHT = 65; 
   const START_HOUR = 8;   
   const END_HOUR = 21;    
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
+
+  // Helper para comparar datas sem erro de fuso horário (YYYY-MM-DD)
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const getServiceColor = (serviceName: string) => {
     const name = serviceName.toLowerCase();
@@ -31,10 +44,6 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     return 'bg-stone-100 border-stone-200 text-stone-700';
   };
 
-  /**
-   * NOVA LÓGICA: Sempre começa no dia selecionado (viewDate) 
-   * e mostra os próximos 7 dias.
-   */
   const getWeekDays = (startDate: Date) => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(startDate);
@@ -50,6 +59,12 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     const next = new Date(viewDate);
     next.setDate(viewDate.getDate() + offset);
     setViewDate(next);
+  };
+
+  const handleGoToToday = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    setViewDate(today);
   };
 
   const getTimeData = (timeStr: string) => {
@@ -70,14 +85,19 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     blockDate.setHours(0,0,0,0);
     const target = new Date(targetDate);
     target.setHours(0,0,0,0);
+    
     if (target.getTime() === blockDate.getTime()) return true;
     if (!block.isRecurring || target < blockDate) return false;
+    
     const diffDays = Math.round((target.getTime() - blockDate.getTime()) / (1000 * 60 * 60 * 24));
     const repeats = block.repeatCount || 0;
+    
     switch (block.recurringType) {
       case 'daily': return diffDays <= repeats;
-      case 'weekly': return diffDays % 7 === 0 && diffDays / 7 <= repeats;
-      case 'monthly': return target.getDate() === blockDate.getDate() && (target.getMonth() - blockDate.getMonth() + (12 * (target.getFullYear() - blockDate.getFullYear()))) <= repeats;
+      case 'weekly': return diffDays % 7 === 0 && (diffDays / 7) <= repeats;
+      case 'monthly': 
+        const monthDiff = (target.getFullYear() - blockDate.getFullYear()) * 12 + (target.getMonth() - blockDate.getMonth());
+        return target.getDate() === blockDate.getDate() && monthDiff <= repeats;
       default: return false;
     }
   };
@@ -89,8 +109,8 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border-b border-stone-100 bg-white gap-3">
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setViewDate(new Date())} 
-            className="px-4 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-lg transition-colors"
+            onClick={handleGoToToday} 
+            className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg transition-colors shadow-sm active:scale-95"
           >
             Hoje
           </button>
@@ -113,24 +133,18 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* ÁREA DA GRADE COM SCROLL LATERAL E SENSAÇÃO DE CONTINUIDADE */}
+      {/* ÁREA DA GRADE */}
       <div className="flex-1 overflow-auto bg-[#F9FAFB] relative scrollbar-thin scrollbar-thumb-stone-200">
-        
-        {/* 
-          Grid Responsiva:
-          - Mobile: 70px + 7 colunas de 75vw cada (força o corte visual da 2ª coluna)
-          - Desktop: 70px + 7 colunas flexíveis (1fr)
-        */}
         <div className="inline-grid sm:grid grid-cols-[70px_repeat(7,75vw)] sm:grid-cols-[70px_repeat(7,1fr)] relative bg-white min-h-full">
           
-          {/* CABEÇALHO DOS DIAS (Sticky Top) */}
+          {/* CABEÇALHO DOS DIAS */}
           <div className="sticky top-0 z-30 col-span-full grid grid-cols-[70px_repeat(7,75vw)] sm:grid-cols-[70px_repeat(7,1fr)] bg-white border-b border-stone-100">
             <div className="bg-stone-50/50 border-r border-stone-100 sticky left-0 z-40"></div>
             {weekDays.map((day, i) => {
               const isToday = day.toDateString() === new Date().toDateString();
               const isFirstColumn = i === 0;
               return (
-                <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isFirstColumn ? 'bg-primary/5' : ''} ${isToday ? 'bg-primary/5' : ''}`}>
+                <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isFirstColumn ? 'bg-primary/[0.03]' : ''} ${isToday ? 'bg-primary/[0.03]' : ''}`}>
                   <p className={`text-[10px] font-bold uppercase mb-1 ${isToday ? 'text-primary' : 'text-stone-400'}`}>
                     {day.toLocaleDateString('pt-PT', { weekday: 'short' })}
                   </p>
@@ -142,7 +156,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
             })}
           </div>
 
-          {/* HORAS LATERAIS (Sticky Left com Shadow para Profundidade) */}
+          {/* HORAS LATERAIS */}
           <div className="bg-white border-r border-stone-100 sticky left-0 z-20 shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
             {hours.map(hour => (
               <div 
@@ -157,19 +171,17 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
 
           {/* COLUNAS DOS DIAS */}
           {weekDays.map((day, colIdx) => {
-            const dateStr = day.toISOString().split('T')[0];
+            const dateStr = formatDateLocal(day); // Usando o helper local seguro
             const dayAppointments = appointments.filter(a => a.date === dateStr);
             const dayBlocks = timeBlocks.filter(b => isBlockActiveOnDay(b, day));
             const isFirstColumn = colIdx === 0;
 
             return (
               <div key={colIdx} className={`relative border-r border-stone-100 last:border-0 bg-white group ${isFirstColumn ? 'bg-primary/[0.02]' : ''}`}>
-                {/* Linhas de grade horária */}
                 {hours.map(h => (
                   <div key={h} className="border-b border-stone-50" style={{ height: `${HOUR_HEIGHT}px` }} />
                 ))}
 
-                {/* BLOQUEIOS */}
                 {dayBlocks.map(block => {
                   const { top } = getTimeData(block.startTime);
                   const height = calculateHeight(block.startTime, block.endTime);
@@ -184,25 +196,31 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
                   );
                 })}
 
-                {/* AGENDAMENTOS */}
                 {dayAppointments.map(app => {
                   const { top } = getTimeData(app.startTime);
                   const height = calculateHeight(app.startTime, app.endTime);
-                  const colorClasses = getServiceColor(app.serviceName);
+                  
+                  // Usa a cor dinâmica do serviço ou fallback
+                  const bgColor = app.serviceColor || '#f5f5f4';
 
                   return (
                     <div
                       key={app.id}
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditAppointment(app); }}
-                      className={`absolute left-1.5 right-1.5 z-40 rounded-xl border-l-[5px] p-3 shadow-sm transition-all cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-95 group overflow-hidden ${colorClasses}`}
-                      style={{ top: `${top + 3}px`, height: `${height - 6}px` }}
+                      className="absolute left-1.5 right-1.5 z-40 rounded-xl border-l-[5px] p-3 shadow-sm transition-all cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-95 group overflow-hidden"
+                      style={{ 
+                        top: `${top + 3}px`, 
+                        height: `${height - 6}px`,
+                        backgroundColor: bgColor,
+                        borderLeftColor: 'rgba(0,0,0,0.1)'
+                      }}
                     >
                       <div className="flex flex-col h-full pointer-events-none">
                         <div className="flex justify-between items-start mb-1">
-                           <p className="text-xs font-bold truncate leading-tight">{app.clientName}</p>
-                           <p className="text-[10px] font-bold opacity-60 whitespace-nowrap">{app.startTime}</p>
+                           <p className="text-xs font-bold truncate leading-tight text-primary-dark">{app.clientName}</p>
+                           <p className="text-[10px] font-bold opacity-60 text-primary-dark whitespace-nowrap">{app.startTime}</p>
                         </div>
-                        <p className="text-[10px] font-medium truncate opacity-80 uppercase tracking-tighter">{app.serviceName}</p>
+                        <p className="text-[10px] font-medium truncate opacity-80 text-primary-dark uppercase tracking-tighter">{app.serviceName}</p>
                       </div>
                     </div>
                   );
@@ -213,7 +231,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* LEGENDA DE CORES */}
+      {/* LEGENDA */}
       <div className="p-3 bg-white border-t border-stone-100 flex gap-6 overflow-x-auto no-scrollbar">
         {[
           { color: 'bg-rose-100 border-rose-200', label: 'Manicure / Gel' },
