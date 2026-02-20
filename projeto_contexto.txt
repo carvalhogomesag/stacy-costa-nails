@@ -81,7 +81,8 @@ ARQUIVO: package.json
     "firebase": "^12.9.0",
     "lucide-react": "^0.564.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.11",
@@ -137,7 +138,7 @@ const App: React.FC = () => {
     mapAddress?: string;
   }>({});
 
-  // 1. SINCRONIZAR ESTADO DE AUTENTICAÇÃO (Evita que o Dashboard bloqueie o site ao carregar)
+  // 1. SINCRONIZAR ESTADO DE AUTENTICAÇÃO
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -168,7 +169,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // 3. ESCUTAR METADADOS (Redes Sociais, Galeria e Mapa da Nuvem)
+  // 3. ESCUTAR METADADOS
   useEffect(() => {
     const unsubMetadata = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "metadata"), (snap) => {
       if (snap.exists()) {
@@ -178,7 +179,6 @@ const App: React.FC = () => {
     return () => unsubMetadata();
   }, []);
 
-  // Função de imagem dinâmica com Placeholders
   const getImg = (index: number) => {
     if (visualMetadata.galleryUrls && visualMetadata.galleryUrls[index]) {
       return visualMetadata.galleryUrls[index];
@@ -186,13 +186,11 @@ const App: React.FC = () => {
     return PLACEHOLDER_IMG;
   };
 
-  // Gerar URL do Iframe do Google Maps
   const getMapIframeUrl = () => {
     const address = visualMetadata.mapAddress || `${BUSINESS_INFO.address}, ${BUSINESS_INFO.city}`;
     return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
   };
 
-  // Gerar Link Externo para o Botão do Maps
   const getExternalMapUrl = () => {
     if (visualMetadata.mapAddress) {
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(visualMetadata.mapAddress)}`;
@@ -201,13 +199,12 @@ const App: React.FC = () => {
   };
 
   return (
-    // TEMA: Nude, Bege e Champagne (Identidade Stacy Costa Nails)
     <div className="min-h-screen flex flex-col selection:bg-[#d4bca9] selection:text-[#4a3f35] bg-[#fdfbf7]">
       
       {/* NAVBAR */}
       <Navbar onAdminClick={() => setIsAdminLoginOpen(true)} />
 
-      {/* COMPONENTES ADMINISTRATIVOS (RENDERIZAÇÃO CONDICIONAL PARA EVITAR OVERLAYS) */}
+      {/* COMPONENTES ADMINISTRATIVOS */}
       {isAdminLoginOpen && (
         <AdminLogin 
           isOpen={isAdminLoginOpen} 
@@ -231,58 +228,63 @@ const App: React.FC = () => {
       )}
 
       {/* HERO SECTION */}
-      <section id="inicio" className="relative min-h-[90vh] md:min-h-[95vh] flex items-center justify-center overflow-hidden bg-[#1a1714]">
+      <section id="inicio" className="relative min-h-[85vh] md:min-h-[95vh] flex items-center justify-center overflow-hidden bg-[#1a1714]">
         <div className="absolute inset-0 z-0">
           <img 
             src={getImg(0)} 
             alt={BUSINESS_INFO.name} 
             className="w-full h-full object-cover opacity-60 scale-105" 
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-[#1a1714]/80 to-[#1a1714]"></div> 
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-[#1a1714]/80 to-[#1a1714]"></div> 
         </div>
 
-        <div className="container mx-auto px-4 relative z-10 pt-24 text-center">
-            <div className="inline-flex items-center gap-2 bg-[#b5967a]/10 border border-[#b5967a]/20 px-5 py-2 rounded-full mb-8 animate-fade-in text-[#d4bca9]">
-              <Star size={14} fill="currentColor" />
-              <span className="text-xs font-bold uppercase tracking-[0.3em]">Nail Artist Premium em Algés</span>
+        <div className="container mx-auto px-4 relative z-10 pt-28 md:pt-24 text-center">
+            <div className="inline-flex items-center gap-2 bg-[#b5967a]/10 border border-[#b5967a]/20 px-4 py-2 md:px-5 md:py-2 rounded-full mb-6 md:mb-8 text-[#d4bca9]">
+              <Star size={12} fill="currentColor" className="md:w-3.5 md:h-3.5" />
+              <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] md:tracking-[0.3em]">Nail Artist Premium em Algés</span>
             </div>
             
-            <h2 className="font-serif text-5xl md:text-8xl font-bold mb-8 leading-[1.1] text-white tracking-tighter uppercase">
+            <h2 className="font-serif text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold mb-6 md:mb-8 leading-[1.1] text-white tracking-tighter uppercase px-2">
               {BUSINESS_INFO.name} <br />
-              <span className="text-[#b5967a] italic font-light">{BUSINESS_INFO.subName}</span>
+              <span className="text-[#b5967a] italic font-light text-3xl sm:text-4xl md:text-6xl lg:text-7xl">{BUSINESS_INFO.subName}</span>
             </h2>
             
-            <p className="text-stone-300 text-lg md:text-2xl max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+            <p className="text-stone-300 text-sm sm:text-base md:text-xl lg:text-2xl max-w-2xl mx-auto mb-10 md:mb-12 font-light leading-relaxed px-4">
               Onde a técnica encontra a arte. Especialista em unhas de gel com acabamento impecável e brio em cada detalhe.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-5 justify-center px-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center px-6 sm:px-0 w-full">
               <button 
                 onClick={() => setIsBookingOpen(true)}
-                className="bg-[#b5967a] hover:bg-[#a38569] text-white px-10 py-5 rounded-full text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-2xl shadow-black/40 group active:scale-95"
+                className="w-full sm:w-auto bg-[#b5967a] hover:bg-[#a38569] text-white px-8 md:px-10 py-4 md:py-5 rounded-full text-base md:text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-2xl shadow-black/40 group active:scale-95"
               >
                 Marcar Experiência <ArrowRight className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <a href="#servicos" className="bg-white/5 border border-white/10 text-white px-10 py-5 rounded-full text-lg font-bold hover:bg-white/10 transition-all shadow-sm text-center">Consultar Menu</a>
+              <a 
+                href="#servicos" 
+                className="w-full sm:w-auto bg-white/5 border border-white/10 text-white px-8 md:px-10 py-4 md:py-5 rounded-full text-base md:text-lg font-bold hover:bg-white/10 transition-all shadow-sm text-center flex items-center justify-center"
+              >
+                Consultar Menu
+              </a>
             </div>
         </div>
       </section>
 
       {/* HIGHLIGHTS */}
-      <section className="py-16 md:py-24 bg-white relative overflow-hidden text-center text-[#4a3f35]">
-        <div className="container mx-auto px-4 text-center">
-          <div className="grid md:grid-cols-3 gap-12">
+      <section className="py-16 md:py-24 bg-white text-center">
+        <div className="container mx-auto px-6 md:px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10 md:gap-12">
             {[
               { icon: ShieldCheck, title: "Rigor & Higiene", text: "Espaço projetado para o teu conforto com os mais altos padrões de esterilização." },
-              { icon: Users, title: "Atendimento Exclusivo", text: "Uma experiência personalizada e acolhedora, onde tu és a nossa prioridade." },
+              { icon: Users, title: "Atendimento Exclusivo", text: "Uma experiência personalizada onde tu és a nossa prioridade." },
               { icon: Sparkles, title: "Durabilidade Surreal", text: "Técnicas avançadas de gel e alongamento para unhas perfeitas por semanas." }
             ].map((item, index) => (
               <div key={index} className="flex flex-col items-center group">
-                <div className="w-20 h-20 bg-[#fdfbf7] border border-[#e5dcd3] rounded-full flex items-center justify-center text-[#b5967a] mb-6 group-hover:scale-110 transition-transform shadow-sm">
-                  <item.icon size={32} />
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-[#fdfbf7] border border-[#e5dcd3] rounded-full flex items-center justify-center text-[#b5967a] mb-5 md:mb-6 group-hover:scale-110 transition-transform shadow-sm">
+                  <item.icon size={28} className="md:w-8 md:h-8" />
                 </div>
-                <h3 className="text-xl font-bold font-serif mb-3">{item.title}</h3>
-                <p className="text-stone-500 leading-relaxed text-sm max-w-xs">{item.text}</p>
+                <h3 className="text-lg md:text-xl font-bold font-serif text-[#4a3f35] mb-2 md:mb-3">{item.title}</h3>
+                <p className="text-stone-500 text-sm max-w-[280px] md:max-w-xs leading-relaxed">{item.text}</p>
               </div>
             ))}
           </div>
@@ -290,11 +292,11 @@ const App: React.FC = () => {
       </section>
 
       {/* SERVIÇOS DINÂMICOS */}
-      <section id="servicos" className="py-20 md:py-32 bg-[#fdfbf7]">
-        <div className="container mx-auto px-4 max-w-5xl text-left">
-          <div className="text-center mb-16">
-            <h4 className="text-[#b5967a] text-sm font-bold uppercase tracking-[0.5em] mb-4">O Meu Menu</h4>
-            <h2 className="font-serif text-4xl md:text-6xl font-bold text-[#4a3f35] tracking-tighter">Serviços & Cuidados</h2>
+      <section id="servicos" className="py-16 md:py-32 bg-[#fdfbf7]">
+        <div className="container mx-auto px-6 md:px-4 max-w-5xl text-left">
+          <div className="text-center mb-12 md:mb-16">
+            <h4 className="text-[#b5967a] text-[10px] md:text-sm font-bold uppercase tracking-[0.3em] md:tracking-[0.5em] mb-3 md:mb-4">O Meu Menu</h4>
+            <h2 className="font-serif text-3xl sm:text-4xl md:text-6xl font-bold text-[#4a3f35] tracking-tighter">Serviços & Cuidados</h2>
           </div>
 
           {loadingServices ? (
@@ -302,18 +304,18 @@ const App: React.FC = () => {
               <Loader2 className="animate-spin text-[#b5967a]" size={40} />
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-x-20 gap-y-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-8 md:gap-y-12">
               {dynamicServices.map((s) => (
                 <div 
                   key={s.id} 
                   onClick={() => setIsBookingOpen(true)}
-                  className="group border-b border-[#e5dcd3] pb-8 hover:border-[#b5967a] transition-all cursor-pointer"
+                  className="group border-b border-[#e5dcd3] pb-6 md:pb-8 hover:border-[#b5967a] transition-all cursor-pointer"
                 >
-                  <div className="flex justify-between items-end mb-4">
-                    <h3 className="text-2xl font-bold font-serif text-[#4a3f35] group-hover:text-[#b5967a] transition-colors">{s.name}</h3>
-                    <span className="text-[#b5967a] font-bold text-lg">{s.price}</span>
+                  <div className="flex justify-between items-end mb-3 md:mb-4 gap-4">
+                    <h3 className="text-xl md:text-2xl font-bold font-serif text-[#4a3f35] group-hover:text-[#b5967a] transition-colors leading-tight">{s.name}</h3>
+                    <span className="text-[#b5967a] font-bold text-base md:text-lg whitespace-nowrap">{s.price}</span>
                   </div>
-                  <p className="text-stone-500 text-sm italic font-light">{s.description}</p>
+                  <p className="text-stone-500 text-xs md:text-sm italic font-light">{s.description}</p>
                 </div>
               ))}
             </div>
@@ -322,29 +324,29 @@ const App: React.FC = () => {
       </section>
 
       {/* SOBRE */}
-      <section id="sobre" className="py-20 md:py-32 bg-white overflow-hidden text-left">
-        <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
-            <div className="relative">
-              <div className="relative z-10 rounded-[3rem] overflow-hidden shadow-2xl aspect-[4/5] border-8 border-[#fdfbf7]">
+      <section id="sobre" className="py-16 md:py-32 bg-white overflow-hidden text-left">
+        <div className="container mx-auto px-6 md:px-4 grid lg:grid-cols-2 gap-12 md:gap-16 items-center">
+            <div className="relative order-2 lg:order-1">
+              <div className="relative z-10 rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl aspect-[4/5] md:border-8 md:border-[#fdfbf7]">
                 <img src={getImg(4)} alt="Stacy Costa" className="w-full h-full object-cover" />
               </div>
-              <div className="absolute -bottom-8 -left-8 bg-[#4a3f35] text-white p-10 rounded-3xl max-w-xs shadow-2xl z-20 hidden md:block border border-white/10">
-                <Quote className="text-[#b5967a] mb-4" size={32} />
-                <p className="font-medium italic text-lg leading-snug">"{REVIEWS[0].text}"</p>
-                <p className="text-[#b5967a] text-xs mt-6 uppercase font-bold tracking-widest">{BUSINESS_INFO.owner}</p>
+              <div className="absolute -bottom-6 -left-4 md:-bottom-8 md:-left-8 bg-[#4a3f35] text-white p-6 md:p-10 rounded-2xl md:rounded-3xl max-w-[250px] md:max-w-xs shadow-2xl z-20 border border-white/10 hidden sm:block">
+                <Quote className="text-[#b5967a] mb-3 md:mb-4 w-6 h-6 md:w-8 md:h-8" />
+                <p className="font-medium italic text-sm md:text-lg leading-snug">"{REVIEWS[0].text}"</p>
+                <p className="text-[#b5967a] text-[10px] md:text-xs mt-4 md:mt-6 uppercase font-bold tracking-widest">{BUSINESS_INFO.owner}</p>
               </div>
             </div>
-            <div>
-              <h2 className="font-serif text-4xl md:text-7xl font-bold mb-8 text-[#4a3f35] leading-tight tracking-tighter">
-                Stacy Costa <br /><span className="text-[#b5967a] italic font-light text-5xl md:text-6xl">Paixão pelas Unhas</span>
+            <div className="order-1 lg:order-2">
+              <h2 className="font-serif text-4xl sm:text-5xl md:text-7xl font-bold mb-6 md:mb-8 text-[#4a3f35] leading-tight tracking-tighter">
+                Stacy Costa <br /><span className="text-[#b5967a] italic font-light text-3xl sm:text-4xl md:text-6xl">Paixão pelas Unhas</span>
               </h2>
-              <div className="space-y-6 text-stone-600 font-light text-lg leading-relaxed">
-                <p>Com anos de dedicação à estética, especializei-me em criar resultados que não apenas duram, mas que elevam a confiança de cada mulher.</p>
+              <div className="space-y-4 md:space-y-6 text-stone-600 font-light text-base md:text-lg leading-relaxed">
+                <p>Com anos de dedicação à estética, especializei-me em criar resultados que elevam a confiança de cada mulher.</p>
                 <p>No meu espaço em Algés, utilizo as técnicas mais modernas do mercado internacional para garantir que as tuas unhas são tratadas como joias.</p>
               </div>
               <button 
                 onClick={() => setIsBookingOpen(true)}
-                className="mt-10 text-[#b5967a] font-bold flex items-center gap-2 group border-b border-[#b5967a] pb-1 active:scale-95 transition-all"
+                className="mt-8 md:mt-10 text-[#b5967a] font-bold flex items-center gap-2 group border-b border-[#b5967a] pb-1 active:scale-95 transition-all w-max"
               >
                 Marca a tua visita <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
@@ -353,15 +355,15 @@ const App: React.FC = () => {
       </section>
 
       {/* PORTFOLIO */}
-      <section className="py-20 md:py-24 bg-[#fdfbf7] text-center">
+      <section className="py-16 md:py-24 bg-[#fdfbf7] text-center">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-             <h2 className="font-serif text-3xl md:text-5xl font-bold text-[#4a3f35] mb-4 italic tracking-tight">O Meu Portfolio</h2>
-             <p className="text-stone-500 font-light uppercase tracking-widest text-xs">Trabalhos reais e brio constante</p>
+          <div className="text-center mb-10 md:mb-16">
+             <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-[#4a3f35] mb-3 md:mb-4 italic tracking-tight">O Meu Portfolio</h2>
+             <p className="text-stone-500 font-light uppercase tracking-widest text-[10px] md:text-xs">Trabalhos reais e brio constante</p>
           </div>
-          <div className="columns-2 md:columns-4 gap-6 space-y-4 md:space-y-6">
+          <div className="columns-2 sm:columns-3 md:columns-4 gap-4 md:gap-6 space-y-4 md:space-y-6">
             {[...Array(8)].map((_, idx) => (
-              <div key={idx} className="rounded-3xl overflow-hidden group shadow-md border border-[#e5dcd3] bg-white">
+              <div key={idx} className="rounded-xl md:rounded-3xl overflow-hidden group shadow-sm border border-[#e5dcd3] bg-white break-inside-avoid">
                 <img 
                   src={getImg(idx)} 
                   alt="Portfolio" 
@@ -371,19 +373,19 @@ const App: React.FC = () => {
               </div>
             ))}
 
-            <div className="bg-[#4a3f35] aspect-[3/4] rounded-3xl flex flex-col items-center justify-center p-8 shadow-xl">
-              <Camera size={32} className="text-[#b5967a] mb-6 group-hover:scale-110 transition-transform" />
-              <h4 className="text-white font-black text-xl leading-tight mb-6 uppercase tracking-widest">Segue-nos</h4>
+            <div className="bg-[#4a3f35] aspect-square md:aspect-[3/4] rounded-xl md:rounded-3xl flex flex-col items-center justify-center p-4 md:p-8 shadow-xl break-inside-avoid">
+              <Camera className="text-[#b5967a] mb-4 md:mb-6 w-6 h-6 md:w-8 md:h-8 group-hover:scale-110 transition-transform" />
+              <h4 className="text-white font-black text-sm md:text-xl leading-tight mb-4 md:mb-6 uppercase tracking-widest">Segue-nos</h4>
               
-              <div className="flex gap-4">
+              <div className="flex gap-3 md:gap-4 flex-wrap justify-center">
                 {visualMetadata.socialLinks?.instagram && (
-                  <a href={visualMetadata.socialLinks.instagram} target="_blank" rel="noreferrer" className="w-12 h-12 bg-[#b5967a] rounded-xl flex items-center justify-center text-white hover:bg-[#a38569] transition-all hover:-translate-y-1 shadow-lg">
-                    <Instagram size={24} />
+                  <a href={visualMetadata.socialLinks.instagram} target="_blank" rel="noreferrer" className="w-10 h-10 md:w-12 md:h-12 bg-[#b5967a] rounded-lg md:rounded-xl flex items-center justify-center text-white hover:bg-[#a38569] transition-all shadow-lg">
+                    <Instagram className="w-5 h-5 md:w-6 md:h-6" />
                   </a>
                 )}
                 {visualMetadata.socialLinks?.tiktok && (
-                  <a href={visualMetadata.socialLinks.tiktok} target="_blank" rel="noreferrer" className="w-12 h-12 bg-[#b5967a] rounded-xl flex items-center justify-center text-white hover:bg-[#a38569] transition-all hover:-translate-y-1 shadow-lg">
-                    <Music2 size={24} />
+                  <a href={visualMetadata.socialLinks.tiktok} target="_blank" rel="noreferrer" className="w-10 h-10 md:w-12 md:h-12 bg-[#b5967a] rounded-lg md:rounded-xl flex items-center justify-center text-white hover:bg-[#a38569] transition-all shadow-lg">
+                    <Music2 className="w-5 h-5 md:w-6 md:h-6" />
                   </a>
                 )}
               </div>
@@ -393,58 +395,58 @@ const App: React.FC = () => {
       </section>
 
       {/* ESPAÇO */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-             <div className="order-2 md:order-1 space-y-8 text-left">
-                <h3 className="font-serif text-3xl md:text-5xl text-[#4a3f35] italic tracking-tight leading-none">O Teu Momento</h3>
-                <p className="text-stone-500 leading-relaxed text-lg font-light">
+      <section className="py-16 md:py-20 bg-white">
+        <div className="container mx-auto px-6 md:px-4">
+          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+             <div className="order-2 md:order-1 space-y-6 md:space-y-8 text-left">
+                <h3 className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#4a3f35] italic tracking-tight leading-none">O Teu Momento</h3>
+                <p className="text-stone-500 leading-relaxed text-base md:text-lg font-light">
                   Preparamos um ambiente minimalista e relaxante, pensado para que possas desfrutar do teu momento de cuidado com toda a tranquilidade.
                 </p>
-                <div className="flex gap-4">
-                   <div className="rounded-[2rem] overflow-hidden h-44 flex-1 border border-[#e5dcd3] shadow-inner">
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                   <div className="rounded-xl md:rounded-[2rem] overflow-hidden aspect-square md:aspect-auto md:h-44 border border-[#e5dcd3] shadow-inner">
                       <img src={getImg(5)} alt="Espaço" className="w-full h-full object-cover hover:scale-110 transition-transform duration-700" />
                    </div>
-                   <div className="rounded-[2rem] overflow-hidden h-44 flex-1 border border-[#e5dcd3] shadow-inner">
+                   <div className="rounded-xl md:rounded-[2rem] overflow-hidden aspect-square md:aspect-auto md:h-44 border border-[#e5dcd3] shadow-inner">
                       <img src={getImg(6)} alt="Detalhes" className="w-full h-full object-cover hover:scale-110 transition-transform duration-700" />
                    </div>
                 </div>
              </div>
-             <div className="order-1 md:order-2 h-80 md:h-[550px] rounded-[4rem] overflow-hidden shadow-2xl border-[12px] border-[#fdfbf7]">
-                <img src={getImg(7)} alt="Interior" className="w-full h-full object-cover" />
+             <div className="order-1 md:order-2 h-64 sm:h-80 md:h-[550px] rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border-[8px] md:border-[12px] border-[#fdfbf7]">
+                <img src={getImg(7)} alt="Interior Stacy Costa Nails" className="w-full h-full object-cover" />
              </div>
           </div>
         </div>
       </section>
 
       {/* CONTACTO COM MAPA DINÂMICO */}
-      <section id="contacto" className="py-20 md:py-32 bg-[#fdfbf7] text-left">
-        <div className="container mx-auto px-4 grid lg:grid-cols-12 gap-16">
-          <div className="lg:col-span-5 space-y-12 text-[#4a3f35]">
-            <h2 className="font-serif text-5xl md:text-6xl font-bold italic uppercase tracking-tighter leading-none">Vem Visitar-nos</h2>
-            <div className="space-y-10">
-              <div className="flex gap-6">
-                <div className="w-14 h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
-                   <MapPin size={28} />
+      <section id="contacto" className="py-16 md:py-32 bg-[#fdfbf7] text-left">
+        <div className="container mx-auto px-6 md:px-4 grid lg:grid-cols-12 gap-12 md:gap-16">
+          <div className="lg:col-span-5 space-y-8 md:space-y-12 text-[#4a3f35]">
+            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold italic uppercase tracking-tighter leading-none">Vem Visitar-nos</h2>
+            <div className="space-y-8 md:space-y-10">
+              <div className="flex gap-4 md:gap-6">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-xl md:rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
+                   <MapPin className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
-                <div><h4 className="font-bold text-xl mb-1">Localização</h4><p className="text-stone-500 font-light">{BUSINESS_INFO.address}<br/>{BUSINESS_INFO.city}</p></div>
+                <div><h4 className="font-bold text-lg md:text-xl mb-1">Localização</h4><p className="text-stone-500 font-light text-sm md:text-base">{BUSINESS_INFO.address}<br/>{BUSINESS_INFO.city}</p></div>
               </div>
-              <div className="flex gap-6">
-                <div className="w-14 h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
-                   <Clock size={28} />
+              <div className="flex gap-4 md:gap-6">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-xl md:rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
+                   <Clock className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
-                <div><h4 className="font-bold text-xl mb-1">Horário</h4><p className="text-stone-500 font-light">{BUSINESS_INFO.openingHours}</p></div>
+                <div><h4 className="font-bold text-lg md:text-xl mb-1">Horário</h4><p className="text-stone-500 font-light text-sm md:text-base">{BUSINESS_INFO.openingHours}</p></div>
               </div>
-              <div className="flex gap-6">
-                <div className="w-14 h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
-                   <Phone size={28} />
+              <div className="flex gap-4 md:gap-6">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-white border border-[#e5dcd3] shadow-sm rounded-xl md:rounded-2xl flex items-center justify-center text-[#b5967a] shrink-0">
+                   <Phone className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
-                <div><h4 className="font-bold text-xl mb-1">Telemóvel</h4><p className="text-[#4a3f35] text-3xl font-bold tracking-tight">{BUSINESS_INFO.phone}</p></div>
+                <div><h4 className="font-bold text-lg md:text-xl mb-1">Telemóvel</h4><p className="text-[#4a3f35] text-2xl md:text-3xl font-bold tracking-tight">{BUSINESS_INFO.phone}</p></div>
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-7 h-[500px] md:h-[600px] rounded-[4rem] overflow-hidden border-[10px] border-white shadow-2xl relative group">
+          <div className="lg:col-span-7 h-[350px] md:h-[600px] rounded-[2rem] md:rounded-[4rem] overflow-hidden border-[6px] md:border-[10px] border-white shadow-xl md:shadow-2xl relative group">
             <iframe 
               src={getMapIframeUrl()} 
               width="100%" 
@@ -454,15 +456,15 @@ const App: React.FC = () => {
               loading="lazy" 
               referrerPolicy="no-referrer-when-downgrade"
               title="Google Maps"
-              className="grayscale-[0.3] hover:grayscale-0 transition-all duration-700"
+              className="grayscale-[0.3] md:hover:grayscale-0 transition-all duration-700"
             />
             
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <a 
                 href={getExternalMapUrl()} 
                 target="_blank" 
                 rel="noreferrer" 
-                className="bg-[#b5967a] text-white px-10 py-5 rounded-full font-bold shadow-2xl uppercase tracking-widest text-sm active:scale-95 transition-all block whitespace-nowrap"
+                className="bg-[#b5967a] text-white px-8 py-4 md:px-10 md:py-5 rounded-full font-bold shadow-2xl uppercase tracking-widest text-xs md:text-sm active:scale-95 transition-all block whitespace-nowrap"
               >
                 Abrir no Google Maps
               </a>
@@ -472,20 +474,21 @@ const App: React.FC = () => {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-20 bg-[#1a1714] text-white text-center border-t border-white/5">
-        <div className="flex flex-col items-center gap-8">
+      <footer className="py-12 md:py-20 bg-[#1a1714] text-white text-center border-t border-white/5">
+        <div className="flex flex-col items-center gap-6 md:gap-8">
           <div className="flex items-center gap-3">
-             <Heart className="text-[#b5967a]" size={36} />
+             <Heart className="text-[#b5967a] w-8 h-8 md:w-9 md:h-9" />
              <div className="text-left uppercase">
-                <h1 className="font-serif text-3xl font-bold leading-none tracking-tighter">{BUSINESS_INFO.name}</h1>
-                <p className="text-[11px] tracking-[0.4em] text-[#b5967a] font-black">{BUSINESS_INFO.subName}</p>
+                <h1 className="font-serif text-2xl md:text-3xl font-bold leading-none tracking-tighter">{BUSINESS_INFO.name}</h1>
+                <p className="text-[9px] md:text-[11px] tracking-[0.3em] md:tracking-[0.4em] text-[#b5967a] font-black">{BUSINESS_INFO.subName}</p>
              </div>
           </div>
-          <div className="flex gap-6">
+          <div className="flex gap-5 md:gap-6">
              {visualMetadata.socialLinks?.instagram && <a href={visualMetadata.socialLinks.instagram} target="_blank" rel="noreferrer" className="text-stone-400 hover:text-[#b5967a] transition-colors"><Instagram size={24}/></a>}
              {visualMetadata.socialLinks?.facebook && <a href={visualMetadata.socialLinks.facebook} target="_blank" rel="noreferrer" className="text-stone-400 hover:text-[#b5967a] transition-colors"><Facebook size={24}/></a>}
+             {visualMetadata.socialLinks?.tiktok && <a href={visualMetadata.socialLinks.tiktok} target="_blank" rel="noreferrer" className="text-stone-400 hover:text-[#b5967a] transition-colors"><Music2 size={24}/></a>}
           </div>
-          <p className="text-stone-500 text-[10px] uppercase tracking-[0.5em] font-medium italic">© 2026 {BUSINESS_INFO.name} • Algés, Portugal</p>
+          <p className="text-stone-500 text-[9px] md:text-[10px] uppercase tracking-[0.4em] md:tracking-[0.5em] font-medium italic px-4">© 2026 {BUSINESS_INFO.name} • Algés, Portugal</p>
         </div>
       </footer>
     </div>
@@ -560,90 +563,94 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-[#b5967a]">
-        <Loader2 className="animate-spin mb-4" size={40} />
-        <p className="text-stone-500 font-medium tracking-widest uppercase text-xs">A carregar agenda...</p>
+        <Loader2 className="animate-spin mb-4" size={24} />
+        <p className="text-stone-500 font-medium tracking-widest uppercase text-[8px]">A carregar...</p>
       </div>
     );
   }
 
   return (
-    <div className="animate-in fade-in duration-500 h-full flex flex-col">
-      {/* Cabeçalho da Aba - Paleta Nude/Gold */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h3 className="text-white font-bold flex items-center gap-3 text-lg">
-          <CalendarIcon className="text-[#b5967a]" size={24}/> 
-          Agenda de Reservas
-        </h3>
+    <div className="animate-in fade-in duration-500 h-full flex flex-col overflow-hidden">
+      
+      {/* Cabeçalho da Aba - COMPACTAÇÃO EXTREMA */}
+      <div className="flex items-center justify-between mb-2 md:mb-5 gap-2 px-1">
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="text-[#b5967a] w-4 h-4 md:w-6 md:h-6"/> 
+          <h3 className="text-white font-bold text-sm md:text-lg uppercase tracking-tight">
+            Agenda
+          </h3>
+        </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-2">
+          {/* Botão Nova Marcação Ultra Slim no Mobile */}
           <button 
             onClick={onNewBooking}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#b5967a] hover:bg-[#a38569] text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg shadow-[#b5967a]/20 active:scale-95"
+            className="flex items-center justify-center gap-1.5 bg-[#b5967a] hover:bg-[#a38569] text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all shadow-lg active:scale-95 uppercase tracking-wider"
           >
-            <Plus size={16} /> NOVA MARCAÇÃO
+            <Plus size={14} strokeWidth={3} /> <span className="hidden xs:inline">Nova</span>
           </button>
 
-          <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
+          {/* Selector de Vista compacto */}
+          <div className="flex bg-stone-900 border border-white/5 p-0.5 md:p-1 rounded-lg md:rounded-xl">
             <button 
               onClick={() => setAppointmentsMode('calendar')} 
-              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'calendar' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600 hover:text-stone-400'}`}
-              title="Vista de Calendário"
+              className={`p-1.5 md:p-2 rounded-md transition-all ${appointmentsMode === 'calendar' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600'}`}
             >
-              <CalendarDays size={20}/>
+              <CalendarDays size={16}/>
             </button>
             <button 
               onClick={() => setAppointmentsMode('list')} 
-              className={`p-2 rounded-lg transition-all ${appointmentsMode === 'list' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600 hover:text-stone-400'}`}
-              title="Vista de Lista"
+              className={`p-1.5 md:p-2 rounded-md transition-all ${appointmentsMode === 'list' ? 'bg-stone-800 text-[#b5967a]' : 'text-stone-600'}`}
             >
-              <LayoutList size={20}/>
+              <LayoutList size={16}/>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Conteúdo Dinâmico */}
-      {appointmentsMode === 'calendar' ? (
-        <AdminCalendar 
-          appointments={appointments} 
-          timeBlocks={timeBlocks} 
-          onEditAppointment={onEditAppointment} 
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {appointments.length === 0 ? (
-            <div className="col-span-full bg-stone-900/50 border border-dashed border-white/10 rounded-[2.5rem] py-20 text-center">
-              <p className="text-stone-600 italic">Sem marcações registadas para os próximos dias.</p>
-            </div>
-          ) : (
-            appointments.map(app => (
-              <div 
-                key={app.id} 
-                onClick={() => onEditAppointment(app)}
-                className="bg-stone-900 border border-white/5 p-6 rounded-[2.5rem] relative group shadow-lg hover:border-[#b5967a]/30 transition-all cursor-pointer"
-              >
-                <span className="bg-[#b5967a]/10 text-[#b5967a] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                  {app.serviceName}
-                </span>
-                <div className="mt-4 text-white font-bold text-lg leading-tight">{app.clientName}</div>
-                <div className="text-stone-400 text-sm mt-2 font-medium">
-                  {new Date(app.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} • {app.startTime} - {app.endTime}
-                </div>
-                <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-[#d4bca9] font-bold text-sm">
-                  <Phone size={14}/> {app.clientPhone}
-                </div>
-                <button 
-                  onClick={(e) => handleDeleteApp(e, app.id!)} 
-                  className="absolute top-6 right-6 text-stone-700 hover:text-red-500 transition-colors"
-                  title="Eliminar Marcação"
-                >
-                  <Trash2 size={18}/>
-                </button>
+      {/* Área do Calendário - Ocupa agora o máximo de espaço possível */}
+      <div className="flex-1 min-h-0">
+        {appointmentsMode === 'calendar' ? (
+          <AdminCalendar 
+            appointments={appointments} 
+            timeBlocks={timeBlocks} 
+            onEditAppointment={onEditAppointment} 
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto h-full pr-1">
+            {appointments.length === 0 ? (
+              <div className="col-span-full bg-stone-900/50 border border-dashed border-white/10 rounded-2xl py-10 text-center px-6">
+                <p className="text-stone-600 italic text-xs font-light">Sem marcações registadas.</p>
               </div>
-            ))
-          )}
-        </div>
-      )}
+            ) : (
+              appointments.map(app => (
+                <div 
+                  key={app.id} 
+                  onClick={() => onEditAppointment(app)}
+                  className="bg-stone-900 border border-white/5 p-4 rounded-2xl relative group shadow-lg hover:border-[#b5967a]/30 transition-all cursor-pointer"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="bg-[#b5967a]/10 text-[#b5967a] px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-[#b5967a]/20">
+                      {app.serviceName}
+                    </span>
+                    <button 
+                      onClick={(e) => handleDeleteApp(e, app.id!)} 
+                      className="text-stone-700 hover:text-red-500 transition-colors p-1"
+                    >
+                      <Trash2 size={14}/>
+                    </button>
+                  </div>
+                  <div className="text-white font-bold text-sm leading-tight mb-1">{app.clientName}</div>
+                  <div className="text-stone-400 text-[10px] font-medium flex items-center gap-1.5">
+                    <Clock size={10} className="text-[#b5967a]" />
+                    {app.startTime} - {app.endTime}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -713,14 +720,16 @@ const DashboardDesign: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.includes('webp')) {
-      alert("Por favor, utilize apenas imagens no formato .webp para garantir a performance do site.");
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Formato inválido. Por favor, utilize imagens JPG, PNG ou WEBP.");
       return;
     }
 
     setUploadingIdx(index);
     try {
-      const storageRef = ref(storage, `businesses/${CLIENT_ID}/gallery/slot_${index}.webp`);
+      const extension = file.name.split('.').pop() || 'jpg';
+      const storageRef = ref(storage, `businesses/${CLIENT_ID}/gallery/slot_${index}.${extension}`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 
@@ -740,71 +749,69 @@ const DashboardDesign: React.FC = () => {
     setUploadingIdx(null);
   };
 
-  // Função auxiliar para dar dicas de UX nos slots de fotos
   const getSlotUX = (idx: number) => {
-    if (idx === 0) return { title: "Banner (Fundo)", icon: <Camera size={32} className="text-stone-700" />, border: "border-stone-600 border-dashed bg-stone-900" };
-    if (idx === 4) return { title: "Foto de Perfil", icon: <User size={32} className="text-[#b5967a]" />, border: "border-[#b5967a] border-solid bg-[#b5967a]/5 shadow-[0_0_15px_rgba(181,150,122,0.1)]" };
-    if (idx >= 5) return { title: `Foto do Espaço ${idx - 4}`, icon: <Camera size={32} className="text-stone-800" />, border: "border-white/10 border-dashed bg-stone-950" };
-    return { title: `Trabalho ${idx + 1}`, icon: <Camera size={32} className="text-stone-800" />, border: "border-white/10 border-dashed bg-stone-950" };
+    if (idx === 0) return { title: "Banner Principal", icon: <Camera size={28} className="text-stone-700" />, border: "border-stone-600 border-dashed bg-stone-900" };
+    if (idx === 4) return { title: "Foto Perfil", icon: <User size={28} className="text-[#b5967a]" />, border: "border-[#b5967a] border-solid bg-[#b5967a]/5 shadow-inner" };
+    if (idx >= 5) return { title: `Espaço ${idx - 4}`, icon: <Camera size={28} className="text-stone-800" />, border: "border-white/10 border-dashed bg-stone-950" };
+    return { title: `Trabalho ${idx + 1}`, icon: <Camera size={28} className="text-stone-800" />, border: "border-white/10 border-dashed bg-stone-950" };
   };
 
   return (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4 font-sans">
-      <div className="grid lg:grid-cols-2 gap-8">
+    <div className="space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 font-sans pb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
         
         {/* Painel de Inputs (Esquerda) */}
-        <div className="bg-stone-900 border border-[#b5967a]/20 p-8 rounded-[3rem] shadow-2xl space-y-6">
-          <h3 className="text-white font-bold flex items-center gap-3 text-lg">
-            <Globe className="text-[#b5967a]"/> Redes e Localização
-          </h3>
+        <div className="bg-stone-900 border border-[#b5967a]/20 p-5 md:p-8 rounded-2xl md:rounded-[3rem] shadow-2xl space-y-6">
+          <div className="flex items-center gap-2">
+            <Globe className="text-[#b5967a] w-5 h-5"/> 
+            <h3 className="text-white font-bold text-base md:text-lg uppercase tracking-tight">Redes e Localização</h3>
+          </div>
           
           <div className="space-y-5">
-            {/* INPUT GOOGLE MAPS */}
-            <div className="space-y-3">
-              <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest flex items-center gap-2">
+            <div className="space-y-2">
+              <label className="text-[9px] md:text-[10px] uppercase font-black text-stone-500 ml-1 tracking-widest flex items-center gap-2">
                 <MapPin size={12} className="text-[#b5967a]" /> Ponto no Google Maps
               </label>
               <input 
-                placeholder="Ex: Stacy Costa Nails Algés"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl py-4 px-5 text-white outline-none focus:border-[#b5967a] transition-all text-sm"
+                placeholder="Nome do salão ou morada completa"
+                className="w-full bg-stone-950 border border-white/5 rounded-xl md:rounded-2xl py-3.5 px-4 md:py-4 md:px-5 text-sm text-white outline-none focus:border-[#b5967a] transition-all"
                 value={mapAddress}
                 onChange={(e) => setMapAddress(e.target.value)}
               />
-              <div className="flex gap-2 px-2">
+              <div className="flex gap-2 px-1">
                 <Info size={14} className="text-[#b5967a] shrink-0 mt-0.5" />
-                <p className="text-[11px] text-stone-500 leading-relaxed italic">
-                  Escreva o nome comercial registado no Google ou a morada completa. O mapa à direita irá mostrar o resultado em tempo real.
+                <p className="text-[10px] md:text-[11px] text-stone-500 leading-relaxed italic">
+                  Escreva o nome comercial ou a morada completa. O mapa à direita (ou abaixo) atualiza na hora.
                 </p>
               </div>
             </div>
 
-            {/* REDES SOCIAIS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-               <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-black text-stone-500 ml-1">Instagram</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+               <div className="space-y-1.5">
+                  <label className="text-[9px] md:text-[10px] uppercase font-black text-stone-500 ml-1">Instagram</label>
                   <input 
                     placeholder="Link do perfil"
                     className="w-full bg-stone-950 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-[#b5967a]"
                     value={socialLinks.instagram || ''}
-                    onChange={(e) => setSocialLinks({...socialLinks, instagram: e.target.value})}
+                    onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})}
                   />
                </div>
-               <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-black text-stone-500 ml-1">TikTok</label>
+               <div className="space-y-1.5">
+                  <label className="text-[9px] md:text-[10px] uppercase font-black text-stone-500 ml-1">TikTok</label>
                   <input 
                     placeholder="Link do TikTok"
                     className="w-full bg-stone-950 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-[#b5967a]"
                     value={socialLinks.tiktok || ''}
-                    onChange={(e) => setSocialLinks({...socialLinks, tiktok: e.target.value})}
+                    onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})}
                   />
                </div>
-               <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] uppercase font-black text-stone-500 ml-1">Facebook</label>
+               <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-[9px] md:text-[10px] uppercase font-black text-stone-500 ml-1">Facebook</label>
                   <input 
-                    placeholder="Link da página"
+                    placeholder="Link da página oficial"
                     className="w-full bg-stone-950 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-[#b5967a]"
                     value={socialLinks.facebook || ''}
-                    onChange={(e) => setSocialLinks({...socialLinks, facebook: e.target.value})}
+                    onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})}
                   />
                </div>
             </div>
@@ -812,25 +819,25 @@ const DashboardDesign: React.FC = () => {
             <button 
               onClick={handleSaveMetadata}
               disabled={loading}
-              className="w-full py-5 mt-4 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-2xl transition-all flex justify-center items-center gap-2 shadow-xl shadow-[#b5967a]/10 active:scale-95 uppercase tracking-widest text-xs"
+              className="w-full py-4 md:py-5 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-xl md:rounded-2xl transition-all flex justify-center items-center gap-2 shadow-xl active:scale-95 uppercase tracking-widest text-xs"
             >
-              {loading ? <Loader2 className="animate-spin" /> : <><Save size={18}/> Guardar Configurações</>}
+              {loading ? <Loader2 className="animate-spin" /> : <><Save size={16}/> Guardar Alterações</>}
             </button>
           </div>
         </div>
 
-        {/* Pré-visualização do Mapa (Direita) */}
-        <div className="bg-stone-900 border border-[#b5967a]/20 rounded-[3rem] overflow-hidden flex flex-col shadow-2xl group">
-          <div className="p-6 bg-stone-900/50 border-b border-white/5 flex items-center justify-between">
-            <h4 className="text-white font-bold text-sm flex items-center gap-2">
-              <MapPin size={16} className="text-[#b5967a]" /> Pré-visualização do Mapa
+        {/* Pré-visualização do Mapa (Responsivo) */}
+        <div className="bg-stone-900 border border-[#b5967a]/20 rounded-2xl md:rounded-[3rem] overflow-hidden flex flex-col shadow-2xl group min-h-[300px] md:min-h-full">
+          <div className="p-4 md:p-6 bg-stone-900/50 border-b border-white/5 flex items-center justify-between">
+            <h4 className="text-white font-bold text-xs md:text-sm flex items-center gap-2 uppercase tracking-wider">
+              <MapPin size={16} className="text-[#b5967a]" /> Preview do Mapa
             </h4>
-            <div className="px-3 py-1 rounded-full bg-[#b5967a]/10 border border-[#b5967a]/20 text-[#b5967a] text-[9px] font-black uppercase tracking-tighter">
-              Em Tempo Real
+            <div className="px-2 py-0.5 rounded-full bg-[#b5967a]/10 border border-[#b5967a]/20 text-[#b5967a] text-[8px] md:text-[9px] font-black uppercase tracking-tighter">
+              Live
             </div>
           </div>
           
-          <div className="flex-1 bg-stone-950 min-h-[350px] relative">
+          <div className="flex-1 bg-stone-950 relative">
             <iframe 
               src={getMapIframeUrl()} 
               width="100%" 
@@ -839,59 +846,59 @@ const DashboardDesign: React.FC = () => {
               allowFullScreen={true} 
               loading="lazy"
               title="Preview Google Maps"
-              className="group-hover:grayscale-0 transition-all duration-1000"
+              className="min-h-[250px] group-hover:grayscale-0 transition-all duration-1000"
             />
           </div>
         </div>
       </div>
 
-      {/* Galeria de Fotos */}
-      <div className="bg-stone-900 border border-[#b5967a]/20 p-8 rounded-[3rem] shadow-2xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <h3 className="text-white font-bold flex items-center gap-3 text-lg uppercase tracking-widest">
-            <Camera className="text-[#b5967a]"/> O Meu Portfolio
-          </h3>
-          <div className="flex items-center gap-2 text-stone-500 bg-stone-950 px-4 py-2 rounded-full border border-white/5">
-            <AlertTriangle size={14} className="text-[#b5967a]" />
-            <span className="text-[10px] font-bold uppercase">Apenas ficheiros .webp</span>
+      {/* Galeria de Fotos - Mobile Optimized */}
+      <div className="bg-stone-900 border border-[#b5967a]/20 p-5 md:p-8 rounded-2xl md:rounded-[3rem] shadow-2xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-3">
+          <div className="flex items-center gap-2">
+            <Camera className="text-[#b5967a] w-5 h-5"/> 
+            <h3 className="text-white font-bold text-base md:text-lg uppercase tracking-tight">O Meu Portfolio</h3>
+          </div>
+          <div className="flex items-center gap-2 text-stone-500 bg-stone-950 px-3 py-1.5 rounded-full border border-white/5 w-max">
+            <AlertTriangle size={12} className="text-[#b5967a]" />
+            <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-wider">Formatos: JPG, PNG, WEBP</span>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-6">
           {gallery.map((url, idx) => {
             const ux = getSlotUX(idx);
             return (
               <div key={idx} className="relative group">
                 <label className="cursor-pointer block relative">
                   
-                  {/* Etiqueta de Destaque no Topo */}
                   {idx === 4 && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b5967a] text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full z-10 shadow-lg whitespace-nowrap">
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#b5967a] text-white text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full z-10 shadow-lg whitespace-nowrap">
                       Sobre Mim
                     </div>
                   )}
 
                   <input 
                     type="file" 
-                    accept="image/webp" 
+                    accept="image/webp, image/jpeg, image/png" 
                     className="hidden" 
                     onChange={(e) => handleFileUpload(e, idx)}
                     disabled={uploadingIdx !== null}
                   />
-                  <div className={`aspect-[4/5] border rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-3 hover:border-[#b5967a]/50 transition-all relative ${ux.border}`}>
+                  <div className={`aspect-[4/5] border rounded-2xl md:rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-2 transition-all relative ${ux.border} ${idx === 4 ? 'ring-1 ring-[#b5967a]/30' : ''}`}>
                     {url ? (
                       <>
                         <img src={url} alt={`Slot ${idx + 1}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                           <div className="bg-[#b5967a] p-3 rounded-full text-white shadow-2xl scale-110">
-                              <Upload size={20} />
+                           <div className="bg-[#b5967a] p-2 md:p-3 rounded-full text-white shadow-2xl">
+                              <Upload size={16} className="md:w-5 md:h-5" />
                            </div>
                         </div>
                       </>
                     ) : (
                       <>
-                        {ux.icon}
-                        <span className={`text-[10px] font-black uppercase tracking-widest text-center px-2 ${idx === 4 ? 'text-[#b5967a]' : 'text-stone-600'}`}>
+                        <div className="scale-75 md:scale-100">{ux.icon}</div>
+                        <span className={`text-[8px] md:text-[9px] font-black uppercase tracking-widest text-center px-2 ${idx === 4 ? 'text-[#b5967a]' : 'text-stone-700'}`}>
                           {ux.title}
                         </span>
                       </>
@@ -899,7 +906,7 @@ const DashboardDesign: React.FC = () => {
 
                     {uploadingIdx === idx && (
                       <div className="absolute inset-0 bg-stone-950/80 flex items-center justify-center backdrop-blur-sm z-50">
-                        <Loader2 className="animate-spin text-[#b5967a]" size={32} />
+                        <Loader2 className="animate-spin text-[#b5967a]" size={24} />
                       </div>
                     )}
                   </div>
@@ -943,7 +950,7 @@ const DashboardServices: React.FC = () => {
     duration: 30 
   });
 
-  // Escutar Serviços do Firestore (Multi-tenant)
+  // Escutar Serviços do Firestore
   useEffect(() => {
     const q = query(
       collection(db, "businesses", CLIENT_ID, "services"), 
@@ -972,7 +979,6 @@ const DashboardServices: React.FC = () => {
         ...newService, 
         createdAt: serverTimestamp() 
       });
-      // Resetar formulário
       setNewService({ name: '', description: '', price: '', duration: 30 });
     } catch (error) {
       console.error("Erro ao criar serviço:", error);
@@ -993,114 +999,115 @@ const DashboardServices: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       
-      {/* Formulário de Criação - Paleta Stacy Nails */}
+      {/* Formulário de Criação - LIGHT MODE STYLE */}
       <form 
         onSubmit={handleAddService} 
-        className="bg-stone-900 border border-[#b5967a]/20 p-8 rounded-[3rem] shadow-2xl space-y-6"
+        className="bg-white border border-stone-100 p-6 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm space-y-6"
       >
-        <h3 className="text-white font-bold flex items-center gap-2 text-lg">
-          <Plus className="text-[#b5967a]"/> Novo Serviço
-        </h3>
+        <div className="flex items-center gap-2">
+          <div className="bg-[#b5967a]/10 p-2 rounded-lg">
+            <Plus className="text-[#b5967a] w-5 h-5"/> 
+          </div>
+          <h3 className="text-stone-800 font-bold text-base md:text-lg uppercase tracking-tight">Novo Serviço</h3>
+        </div>
         
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-             <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-[0.2em]">Nome do Serviço</label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+          <div className="space-y-1.5">
+             <label className="text-[10px] uppercase font-bold text-stone-400 ml-1 tracking-widest">Nome do Serviço</label>
              <input 
                 required 
                 value={newService.name} 
                 onChange={e => setNewService({...newService, name: e.target.value})} 
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] transition-all font-medium" 
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl md:rounded-2xl p-3.5 md:p-4 text-sm text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium" 
                 placeholder="Ex: Manicure Gel"
              />
           </div>
-          <div className="space-y-2">
-             <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-[0.2em]">Preço</label>
+          <div className="space-y-1.5">
+             <label className="text-[10px] uppercase font-bold text-stone-400 ml-1 tracking-widest">Preço</label>
              <input 
                 required 
                 value={newService.price} 
                 onChange={e => setNewService({...newService, price: e.target.value})} 
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] transition-all font-medium" 
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl md:rounded-2xl p-3.5 md:p-4 text-sm text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium" 
                 placeholder="Ex: 25€" 
              />
           </div>
-          <div className="space-y-2">
-             <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-[0.2em]">Duração (Mins)</label>
+          <div className="space-y-1.5">
+             <label className="text-[10px] uppercase font-bold text-stone-400 ml-1 tracking-widest">Duração (Mins)</label>
              <input 
                 required 
                 type="number" 
                 value={newService.duration} 
                 onChange={e => setNewService({...newService, duration: parseInt(e.target.value)})} 
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] transition-all font-medium" 
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl md:rounded-2xl p-3.5 md:p-4 text-sm text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium" 
              />
           </div>
         </div>
 
-        <div className="space-y-2">
-           <label className="text-[10px] uppercase font-black text-stone-500 ml-1 tracking-[0.2em]">Descrição / Detalhes</label>
+        <div className="space-y-1.5">
+           <label className="text-[10px] uppercase font-bold text-stone-400 ml-1 tracking-widest">Descrição / Detalhes</label>
            <input 
               value={newService.description} 
               onChange={e => setNewService({...newService, description: e.target.value})} 
-              className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] transition-all font-medium" 
-              placeholder="Ex: Inclui hidratação e brio final..."
+              className="w-full bg-stone-50 border border-stone-100 rounded-xl md:rounded-2xl p-3.5 md:p-4 text-sm text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium" 
+              placeholder="Ex: Inclui hidratação final..."
            />
         </div>
 
         <button 
           type="submit" 
           disabled={isSubmitting}
-          className="w-full py-5 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-2xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98] uppercase tracking-widest text-sm"
+          className="w-full py-4 md:py-5 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-xl md:rounded-2xl shadow-md transition-all flex justify-center items-center gap-2 active:scale-95 uppercase tracking-widest text-xs"
         >
-          {isSubmitting ? <Loader2 className="animate-spin" /> : "Guardar Serviço"}
+          {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : "Criar Serviço"}
         </button>
       </form>
 
-      {/* Lista de Serviços Ativos */}
-      <div className="grid gap-4">
-        <h4 className="text-stone-500 text-[10px] font-black uppercase tracking-[0.4em] ml-6 mb-2">Serviços Disponíveis</h4>
+      {/* Lista de Serviços - CLEAN LIST STYLE */}
+      <div className="space-y-4">
+        <h4 className="text-stone-400 text-[10px] font-bold uppercase tracking-[0.3em] ml-2 mb-2">Serviços Disponíveis</h4>
         
         {loading ? (
           <div className="py-12 flex justify-center">
             <Loader2 className="animate-spin text-[#b5967a]" size={32} />
           </div>
         ) : dbServices.length === 0 ? (
-          <div className="bg-stone-900/50 border border-dashed border-white/10 rounded-3xl p-16 text-center">
-            <p className="text-stone-600 italic">Nenhum serviço cadastrado no sistema.</p>
+          <div className="bg-white border border-dashed border-stone-200 rounded-2xl p-12 text-center">
+            <p className="text-stone-400 italic text-sm font-light">Nenhum serviço cadastrado.</p>
           </div>
         ) : (
-          dbServices.map(s => (
-            <div 
-              key={s.id} 
-              className="bg-stone-900 border border-white/5 p-6 rounded-3xl flex justify-between items-center group transition-all hover:border-[#b5967a]/30 shadow-lg"
-            >
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 bg-stone-950 border border-white/5 rounded-xl flex items-center justify-center text-[#b5967a] shadow-inner group-hover:scale-110 transition-transform">
-                  <Briefcase size={20}/>
-                </div>
-                <div>
-                  <h4 className="text-white font-bold text-lg">{s.name}</h4>
-                  <div className="flex items-center gap-3 mt-1">
-                    <p className="text-[#d4bca9] text-sm font-bold">{s.price}</p>
-                    <span className="text-stone-700">•</span>
-                    <p className="text-stone-500 text-xs font-medium uppercase tracking-tighter">
-                      {s.duration} minutos
-                    </p>
-                  </div>
-                  {s.description && (
-                    <p className="text-stone-600 text-[11px] mt-2 italic font-light">{s.description}</p>
-                  )}
-                </div>
-              </div>
-              <button 
-                onClick={() => handleDeleteService(s.id!)} 
-                className="text-stone-700 hover:text-red-500 p-3 transition-colors rounded-full hover:bg-red-500/5"
-                title="Eliminar Serviço"
+          <div className="grid grid-cols-1 gap-3 md:gap-4">
+            {dbServices.map(s => (
+              <div 
+                key={s.id} 
+                className="bg-white border border-stone-100 p-4 md:p-6 rounded-xl md:rounded-2xl flex justify-between items-center group transition-all hover:border-[#b5967a]/30 shadow-sm"
               >
-                <Trash2 size={20}/>
-              </button>
-            </div>
-          ))
+                <div className="flex items-center gap-4 md:gap-5">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-stone-50 border border-stone-100 rounded-xl flex items-center justify-center text-[#b5967a] shrink-0">
+                    <Briefcase size={18} className="md:w-5 md:h-5"/>
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-stone-800 font-bold text-sm md:text-lg truncate leading-tight">{s.name}</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[#b5967a] text-[11px] md:text-sm font-black whitespace-nowrap uppercase tracking-tighter">{s.price}</p>
+                      <span className="text-stone-200">•</span>
+                      <p className="text-stone-400 text-[10px] md:text-xs font-medium uppercase tracking-tighter">
+                        {s.duration} min
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => handleDeleteService(s.id!)} 
+                  className="text-stone-300 hover:text-red-500 p-2 md:p-3 transition-colors rounded-full hover:bg-red-50"
+                >
+                  <Trash2 size={18} className="md:w-5 md:h-5"/>
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -1138,7 +1145,7 @@ const DashboardSettings: React.FC = () => {
     endHour: '19:00', 
     breakStart: '13:00', 
     breakEnd: '14:00', 
-    daysOff: [0] // Domingo por padrão
+    daysOff: [0] 
   });
 
   // --- ESTADO DOS BLOQUEIOS ---
@@ -1160,7 +1167,6 @@ const DashboardSettings: React.FC = () => {
   });
 
   useEffect(() => {
-    // 1. Escutar Configuração de Jornada
     const unsubConfig = onSnapshot(doc(db, "businesses", CLIENT_ID, "config", "work-schedule"), (snap) => {
       if (snap.exists()) {
         setWorkConfig(snap.data() as WorkConfig);
@@ -1168,7 +1174,6 @@ const DashboardSettings: React.FC = () => {
       setLoading(false);
     });
 
-    // 2. Escutar Bloqueios Ativos
     const unsubBlocks = onSnapshot(collection(db, "businesses", CLIENT_ID, "timeBlocks"), (snap) => {
       setTimeBlocks(snap.docs.map(d => ({ id: d.id, ...d.data() } as TimeBlock)));
     });
@@ -1176,7 +1181,6 @@ const DashboardSettings: React.FC = () => {
     return () => { unsubConfig(); unsubBlocks(); };
   }, []);
 
-  // --- AÇÕES ---
   const handleSaveConfig = async () => {
     setIsSavingConfig(true);
     try {
@@ -1219,36 +1223,40 @@ const DashboardSettings: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#b5967a]" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <Loader2 className="animate-spin text-[#b5967a]" size={32} />
+    </div>
+  );
 
   return (
-    <div className="space-y-12 animate-in slide-in-from-bottom-4 pb-24">
+    <div className="space-y-8 md:space-y-12 animate-in slide-in-from-bottom-4 pb-20 md:pb-24 font-sans">
       
       {/* SEÇÃO 1: JORNADA DE TRABALHO */}
-      <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-2xl">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 bg-[#b5967a]/10 rounded-2xl flex items-center justify-center text-[#b5967a]">
-            <Clock size={24} />
+      <div className="bg-stone-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[3rem] shadow-2xl">
+        <div className="flex items-center gap-3 mb-6 md:mb-8">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-[#b5967a]/10 rounded-xl flex items-center justify-center text-[#b5967a] shadow-inner">
+            <Clock size={20} className="md:w-6 md:h-6" />
           </div>
           <div>
-            <h3 className="text-white font-bold text-lg">Jornada de Trabalho</h3>
-            <p className="text-[#d4bca9] text-[10px] uppercase tracking-[0.3em] font-black">Configuração de Horários</p>
+            <h3 className="text-white font-bold text-base md:text-lg uppercase tracking-tight">Jornada de Trabalho</h3>
+            <p className="text-[#d4bca9] text-[9px] md:text-[10px] uppercase tracking-[0.2em] font-black">Horários do Salão</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {[
             { label: 'Abertura', key: 'startHour' },
             { label: 'Fecho', key: 'endHour' },
             { label: 'Início Pausa', key: 'breakStart' },
             { label: 'Fim Pausa', key: 'breakEnd' },
           ].map((item) => (
-            <div key={item.key}>
-              <label className="text-[10px] text-stone-500 uppercase font-black mb-2 block ml-1 tracking-widest">{item.label}</label>
+            <div key={item.key} className="space-y-1.5">
+              <label className="text-[9px] md:text-[10px] text-stone-500 uppercase font-black ml-1 tracking-widest">{item.label}</label>
               <select 
                 value={(workConfig as any)[item.key]} 
                 onChange={e => setWorkConfig({...workConfig, [item.key]: e.target.value})}
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] appearance-none font-bold transition-all shadow-inner"
+                className="w-full bg-stone-950 border border-white/5 rounded-xl p-3 md:p-4 text-white text-sm outline-none focus:border-[#b5967a] appearance-none font-bold transition-all shadow-inner"
               >
                 {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
               </select>
@@ -1256,11 +1264,11 @@ const DashboardSettings: React.FC = () => {
           ))}
         </div>
 
-        <div className="mt-8 pt-8 border-t border-white/5">
-          <h4 className="text-stone-400 text-sm font-bold mb-4 flex items-center gap-2">
-            <AlertCircle size={16} className="text-[#b5967a]" /> Dias de Folga/Encerramento:
+        <div className="mt-8 pt-6 md:pt-8 border-t border-white/5">
+          <h4 className="text-stone-400 text-xs font-bold mb-4 flex items-center gap-2">
+            <AlertCircle size={14} className="text-[#b5967a]" /> Dias de Encerramento:
           </h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 md:gap-3">
             {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => (
               <button 
                 key={day} 
@@ -1270,9 +1278,9 @@ const DashboardSettings: React.FC = () => {
                     : [...workConfig.daysOff, idx];
                   setWorkConfig({...workConfig, daysOff: newDays});
                 }} 
-                className={`px-6 py-3 rounded-xl text-xs font-black transition-all border ${
+                className={`flex-1 min-w-[65px] py-3 rounded-xl text-[10px] font-black transition-all border ${
                   workConfig.daysOff.includes(idx) 
-                  ? 'bg-[#b5967a] border-[#b5967a] text-white shadow-lg shadow-[#b5967a]/20' 
+                  ? 'bg-[#b5967a] border-[#b5967a] text-white shadow-lg' 
                   : 'bg-stone-950 border-white/5 text-stone-600 hover:text-[#d4bca9]'
                 }`}
               >
@@ -1285,99 +1293,101 @@ const DashboardSettings: React.FC = () => {
         <button 
           onClick={handleSaveConfig} 
           disabled={isSavingConfig}
-          className="mt-10 flex items-center gap-3 bg-[#b5967a] hover:bg-[#a38569] text-white px-10 py-5 rounded-2xl font-black shadow-xl shadow-[#b5967a]/10 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-sm"
+          className="mt-8 md:mt-10 w-full sm:w-auto flex items-center justify-center gap-3 bg-[#b5967a] hover:bg-[#a38569] text-white px-8 md:px-10 py-4 md:py-5 rounded-xl md:rounded-2xl font-black shadow-xl transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
         >
-          {isSavingConfig ? <Loader2 className="animate-spin" /> : <Save size={20}/>}
+          {isSavingConfig ? <Loader2 className="animate-spin" size={18} /> : <Save size={18}/>}
           Guardar Configuração
         </button>
       </div>
 
       {/* SEÇÃO 2: BLOQUEIOS DE AGENDA */}
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
         
         {/* Formulário de Bloqueio */}
-        <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-xl">
-           <h3 className="text-white font-bold mb-6 flex items-center gap-3 text-lg">
-             <Ban className="text-[#b5967a]"/> Bloquear Horário
-           </h3>
-           <form onSubmit={handleAddTimeBlock} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Motivo (Ex: Formação)</label>
+        <div className="bg-stone-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl space-y-6">
+           <div className="flex items-center gap-2">
+             <Ban className="text-[#b5967a] w-5 h-5"/> 
+             <h3 className="text-white font-bold text-base md:text-lg uppercase tracking-tight">Bloquear Horário</h3>
+           </div>
+           
+           <form onSubmit={handleAddTimeBlock} className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-[9px] md:text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Motivo</label>
                 <input 
                   required 
-                  placeholder="Introduza o motivo..." 
+                  placeholder="Ex: Formação ou Pausa" 
                   value={newBlock.title} 
                   onChange={e => setNewBlock({...newBlock, title: e.target.value})} 
-                  className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] transition-all font-medium" 
+                  className="w-full bg-stone-950 border border-white/5 rounded-xl p-3.5 text-sm text-white outline-none focus:border-[#b5967a] transition-all" 
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Data</label>
+              <div className="space-y-1.5">
+                <label className="text-[9px] md:text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Data do Bloqueio</label>
                 <input 
                   required 
                   type="date" 
                   value={newBlock.date} 
                   onChange={e => setNewBlock({...newBlock, date: e.target.value})} 
-                  className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-[#b5967a] color-scheme-dark transition-all font-medium" 
+                  className="w-full bg-stone-950 border border-white/5 rounded-xl p-3.5 text-sm text-white outline-none focus:border-[#b5967a] color-scheme-dark transition-all" 
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                   <label className="text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Desde as</label>
-                   <select value={newBlock.startTime} onChange={e => setNewBlock({...newBlock, startTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white font-bold outline-none focus:border-[#b5967a] transition-all">
+                <div className="space-y-1.5">
+                   <label className="text-[9px] md:text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Início</label>
+                   <select value={newBlock.startTime} onChange={e => setNewBlock({...newBlock, startTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-xl p-3.5 text-sm text-white font-bold outline-none focus:border-[#b5967a]">
                       {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
                    </select>
                 </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Até às</label>
-                   <select value={newBlock.endTime} onChange={e => setNewBlock({...newBlock, endTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white font-bold outline-none focus:border-[#b5967a] transition-all">
+                <div className="space-y-1.5">
+                   <label className="text-[9px] md:text-[10px] uppercase text-stone-500 font-bold ml-1 tracking-widest">Fim</label>
+                   <select value={newBlock.endTime} onChange={e => setNewBlock({...newBlock, endTime: e.target.value})} className="w-full bg-stone-950 border border-white/5 rounded-xl p-3.5 text-sm text-white font-bold outline-none focus:border-[#b5967a]">
                       {hoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
                    </select>
                 </div>
               </div>
 
-              {/* Recorrência Customizada Stacy Nails */}
-              <div className="bg-stone-950 border border-white/5 p-5 rounded-2xl space-y-4 shadow-inner">
+              {/* Recorrência Compacta */}
+              <div className="bg-stone-950 border border-white/5 p-4 rounded-xl space-y-4 shadow-inner">
                 <div className="flex items-center justify-between">
-                   <div className="flex items-center gap-3 text-stone-300 font-bold text-sm">
-                     <Repeat size={18} className="text-[#b5967a]"/> Repetir este bloqueio
+                   <div className="flex items-center gap-2 text-stone-300 font-bold text-xs uppercase tracking-wider">
+                     <Repeat size={16} className="text-[#b5967a]"/> Recorrência
                    </div>
                    <input 
                     type="checkbox" 
                     checked={newBlock.isRecurring} 
                     onChange={e => setNewBlock({...newBlock, isRecurring: e.target.checked})} 
-                    className="w-6 h-6 accent-[#b5967a] cursor-pointer" 
+                    className="w-5 h-5 accent-[#b5967a] cursor-pointer" 
                    />
                 </div>
                 {newBlock.isRecurring && (
-                  <div className="space-y-4 animate-in slide-in-from-top-2">
-                     <div className="flex gap-2">
+                  <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                     <div className="flex gap-1.5">
                        {['daily', 'weekly', 'monthly'].map(type => (
                          <button 
                           key={type} 
                           type="button" 
                           onClick={() => setNewBlock({...newBlock, recurringType: type as any})} 
-                          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border transition-all ${
+                          className={`flex-1 py-2.5 rounded-lg text-[8px] md:text-[9px] font-black uppercase border transition-all ${
                             newBlock.recurringType === type 
-                            ? 'bg-[#b5967a] border-[#b5967a] text-white shadow-md' 
-                            : 'text-stone-500 border-white/5 hover:text-stone-300'
+                            ? 'bg-[#b5967a] border-[#b5967a] text-white' 
+                            : 'text-stone-500 border-white/5'
                           }`}
                          >
                            {type === 'daily' ? 'Diário' : type === 'weekly' ? 'Semanal' : 'Mensal'}
                          </button>
                        ))}
                      </div>
-                     <div className="flex items-center justify-between bg-stone-900 p-4 rounded-2xl border border-white/5">
-                        <span className="text-stone-400 font-bold text-xs flex items-center gap-2">
-                          <Hash size={16} className="text-[#b5967a]"/> Número de repetições:
+                     <div className="flex items-center justify-between bg-stone-900 p-3 rounded-lg border border-white/5">
+                        <span className="text-stone-400 font-bold text-[10px] flex items-center gap-2 uppercase">
+                          <Hash size={14} className="text-[#b5967a]"/> Repetições:
                         </span>
                         <input 
                           type="number" min="1" max="52" 
                           value={newBlock.repeatCount} 
                           onChange={e => setNewBlock({...newBlock, repeatCount: parseInt(e.target.value)})} 
-                          className="w-16 bg-stone-950 border border-white/5 rounded-lg p-2 text-white text-center font-black outline-none focus:border-[#b5967a]" 
+                          className="w-12 bg-stone-950 border border-white/5 rounded-md p-1.5 text-white text-center font-bold text-xs outline-none" 
                         />
                      </div>
                   </div>
@@ -1386,42 +1396,38 @@ const DashboardSettings: React.FC = () => {
               <button 
                 type="submit" 
                 disabled={isAddingBlock}
-                className="w-full py-5 bg-white text-stone-950 font-black rounded-2xl shadow-xl active:scale-95 transition-all hover:bg-[#fdfbf7] uppercase tracking-widest text-xs"
+                className="w-full py-4 bg-white text-stone-950 font-black rounded-xl shadow-xl active:scale-95 transition-all uppercase tracking-widest text-[11px]"
               >
-                {isAddingBlock ? <Loader2 className="animate-spin text-[#b5967a]" /> : "Bloquear Horário"}
+                {isAddingBlock ? <Loader2 className="animate-spin text-[#b5967a]" size={18} /> : "Bloquear Horário"}
               </button>
            </form>
         </div>
 
-        {/* Lista de Bloqueios */}
-        <div className="bg-stone-900 border border-white/5 p-8 rounded-[3rem] shadow-xl flex flex-col">
-           <h3 className="text-white font-bold mb-6 flex items-center gap-3 text-lg">
-             <LayoutList className="text-[#b5967a]"/> Bloqueios na Agenda
-           </h3>
-           <div className="space-y-3 overflow-y-auto max-h-[550px] pr-2 scrollbar-thin scrollbar-thumb-stone-800 text-left">
+        {/* Lista de Bloqueios - Otimizada para Mobile */}
+        <div className="bg-stone-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl flex flex-col">
+           <div className="flex items-center gap-2 mb-6">
+             <LayoutList className="text-[#b5967a] w-5 h-5"/> 
+             <h3 className="text-white font-bold text-base md:text-lg uppercase tracking-tight">Bloqueios Ativos</h3>
+           </div>
+           
+           <div className="space-y-3 overflow-y-auto max-h-[450px] pr-1 scrollbar-thin scrollbar-thumb-stone-800">
               {timeBlocks.length === 0 ? (
-                <div className="text-center py-16 text-stone-600 italic font-light">Não existem bloqueios ativos no momento.</div>
+                <div className="text-center py-12 text-stone-600 italic font-light text-sm">Nenhum bloqueio ativo.</div>
               ) : (
                 timeBlocks.map(block => (
-                  <div key={block.id} className="bg-stone-950 border border-white/5 p-5 rounded-2xl flex justify-between items-center animate-in zoom-in-95 hover:border-[#b5967a]/20 transition-all shadow-md">
-                     <div>
+                  <div key={block.id} className="bg-stone-950 border border-white/5 p-4 rounded-xl flex justify-between items-center group hover:border-[#b5967a]/20 transition-all">
+                     <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="text-stone-200 font-bold text-sm">{block.title}</h4>
-                          {block.isRecurring && <Repeat size={12} className="text-[#b5967a]"/>}
+                          <h4 className="text-stone-200 font-bold text-sm truncate">{block.title}</h4>
+                          {block.isRecurring && <Repeat size={12} className="text-[#b5967a] shrink-0"/>}
                         </div>
                         <p className="text-stone-500 text-[10px] uppercase font-black tracking-widest">
-                          {block.date} • {block.startTime}-{block.endTime}
+                          {new Date(block.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} • {block.startTime}-{block.endTime}
                         </p>
-                        {block.isRecurring && (
-                          <p className="text-[#d4bca9] text-[9px] font-black uppercase mt-1">
-                            Repete: {block.recurringType} ({block.repeatCount}x)
-                          </p>
-                        )}
                      </div>
                      <button 
                       onClick={() => handleDeleteBlock(block.id!)} 
-                      className="text-stone-800 hover:text-red-500 p-3 transition-colors rounded-full hover:bg-red-500/5"
-                      title="Eliminar Bloqueio"
+                      className="text-stone-700 hover:text-red-500 p-2 transition-colors shrink-0"
                      >
                        <Trash2 size={18}/>
                      </button>
@@ -1453,7 +1459,7 @@ import {
   Loader2, 
   Save, 
   Trash2, 
-  Plus // Ícone que estava faltando
+  Plus 
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -1511,7 +1517,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     setLoading(true);
 
     const selectedService = services.find(s => s.id === formData.serviceId);
-    if (!selectedService) return;
+    if (!selectedService) {
+      alert("Por favor, selecione um serviço.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const [h, m] = formData.startTime.split(':').map(Number);
@@ -1542,8 +1552,8 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
       onClose();
     } catch (error) {
-      console.error("Erro ao salvar:", error);
-      alert("Erro ao processar a operação.");
+      console.error(error);
+      alert("Erro ao processar a marcação.");
     } finally {
       setLoading(false);
     }
@@ -1551,14 +1561,13 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
   const handleDelete = async () => {
     if (!initialData?.id) return;
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este agendamiento?")) return;
+    if (!window.confirm("Deseja eliminar esta marcação?")) return;
 
     setLoading(true);
     try {
       await deleteDoc(doc(db, "businesses", CLIENT_ID, "appointments", initialData.id));
       onClose();
     } catch (error) {
-      console.error("Erro ao deletar:", error);
       alert("Erro ao eliminar.");
     } finally {
       setLoading(false);
@@ -1566,98 +1575,106 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      {/* Overlay com Blur Suave */}
+      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-      <div className="relative bg-stone-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="relative bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 z-[210]">
         
-        {/* Header */}
-        <div className="p-6 border-b border-white/5 bg-stone-900/50 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 ${initialData ? 'bg-amber-500' : 'bg-rose-600'} rounded-xl flex items-center justify-center text-white transition-colors`}>
-              {initialData ? <Calendar size={20} /> : <Plus size={20} />}
+        {/* Header Estilo Fresha */}
+        <div className="p-6 border-b border-stone-100 bg-white flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 ${initialData ? 'bg-[#b5967a]' : 'bg-stone-800'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
+              {initialData ? <Calendar size={22} /> : <Plus size={22} />}
             </div>
             <div>
-              <h2 className="text-white font-bold text-lg">
-                {initialData ? 'Detalles de la Cita' : 'Nueva Marcação Manual'}
+              <h2 className="text-stone-800 font-bold text-lg leading-tight uppercase tracking-tight">
+                {initialData ? 'Detalhes da Marcação' : 'Nova Marcação Manual'}
               </h2>
-              <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest">
-                {initialData ? 'Editar Agendamiento' : 'Painel de Gestão'}
+              <p className="text-[#b5967a] text-[10px] font-black uppercase tracking-widest mt-0.5">
+                {initialData ? 'Editar Registo' : 'Painel de Gestão'}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-stone-500 transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-stone-50 rounded-full text-stone-400 transition-colors">
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-8 space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-                <User size={12} /> Cliente
+        <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6 bg-white">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Nome do Cliente */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <User size={12} className="text-[#b5967a]" /> Nome do Cliente
               </label>
               <input 
                 required
                 type="text"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all"
+                placeholder="Ex: Maria Silva"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
                 value={formData.clientName}
                 onChange={e => setFormData({...formData, clientName: e.target.value})}
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-                <Phone size={12} /> Telemóvel
+            {/* Telemóvel */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <Phone size={12} className="text-[#b5967a]" /> Telemóvel
               </label>
               <input 
                 required
                 type="tel"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all"
+                placeholder="9xx xxx xxx"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
                 value={formData.clientPhone}
                 onChange={e => setFormData({...formData, clientPhone: e.target.value})}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-              <Scissors size={12} /> Serviço
+          {/* Seleção de Serviço */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+              <Scissors size={12} className="text-[#b5967a]" /> Serviço
             </label>
             <select 
               required
-              className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all appearance-none"
+              className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all appearance-none font-medium"
               value={formData.serviceId}
               onChange={e => setFormData({...formData, serviceId: e.target.value})}
             >
               <option value="">Selecione um serviço...</option>
               {services.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.duration} min - {s.price})</option>
+                <option key={s.id} value={s.id}>{s.name} ({s.duration} min)</option>
               ))}
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-                <Calendar size={12} /> Data
+          <div className="grid grid-cols-2 gap-5">
+            {/* Data */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <Calendar size={12} className="text-[#b5967a]" /> Data
               </label>
               <input 
                 required
                 type="date"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all color-scheme-dark"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
                 value={formData.date}
                 onChange={e => setFormData({...formData, date: e.target.value})}
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-                <Clock size={12} /> Início
+            {/* Hora de Início */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <Clock size={12} className="text-[#b5967a]" /> Início
               </label>
               <select 
                 required
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all appearance-none"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all appearance-none font-medium text-center"
                 value={formData.startTime}
                 onChange={e => setFormData({...formData, startTime: e.target.value})}
               >
@@ -1666,26 +1683,26 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-4 pt-4">
             {initialData && (
               <button 
                 type="button"
                 onClick={handleDelete}
                 disabled={loading}
-                className="flex-none p-5 bg-stone-800 hover:bg-red-900/40 text-red-500 rounded-2xl transition-all active:scale-95"
-                title="Eliminar agendamiento"
+                className="flex-none p-4 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-all active:scale-95 border border-red-100"
+                title="Eliminar marcação"
               >
-                <Trash2 size={20} />
+                <Trash2 size={22} />
               </button>
             )}
             
             <button 
               type="submit"
               disabled={loading}
-              className={`flex-1 py-5 ${initialData ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'} text-white font-black rounded-2xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98]`}
+              className="flex-1 py-4 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98] uppercase tracking-widest text-xs"
             >
               {loading ? <Loader2 className="animate-spin" /> : (
-                <><Save size={20} /> {initialData ? 'Actualizar Cita' : 'Confirmar Agendamento'}</>
+                <><Save size={18} /> {initialData ? 'Atualizar Marcação' : 'Confirmar Agenda'}</>
               )}
             </button>
           </div>
@@ -1706,12 +1723,12 @@ import React, { useState } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
-  Clock, 
-  User, 
-  Scissors, 
   Lock, 
   Calendar as CalendarIcon,
-  Heart
+  Clock,
+  User,
+  Heart,
+  Settings // Ícone que estava a faltar na importação
 } from 'lucide-react';
 import { Appointment, TimeBlock } from '../types';
 
@@ -1724,20 +1741,27 @@ interface AdminCalendarProps {
 const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, onEditAppointment }) => {
   const [viewDate, setViewDate] = useState(new Date());
 
-  // --- CONFIGURAÇÃO DA GRADE ---
-  const HOUR_HEIGHT = 80; // pixels por hora
-  const START_HOUR = 8;   // 08:00
-  const END_HOUR = 21;    // 21:00
+  // --- CONFIGURAÇÃO DA GRADE ESTILO FRESHA ---
+  const HOUR_HEIGHT = 65; 
+  const START_HOUR = 8;   
+  const END_HOUR = 21;    
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
-  // --- LÓGICA DE DATAS (SEMANA) ---
+  // Mapeamento de cores para os cards (Estilo Fresha - Tons Pastéis)
+  const getServiceColor = (serviceName: string) => {
+    const name = serviceName.toLowerCase();
+    if (name.includes('gel')) return 'bg-rose-100 border-rose-200 text-rose-700';
+    if (name.includes('alongamento')) return 'bg-amber-100 border-amber-200 text-amber-700';
+    if (name.includes('pedi')) return 'bg-emerald-100 border-emerald-200 text-emerald-700';
+    return 'bg-stone-100 border-stone-200 text-stone-700';
+  };
+
   const getWeekDays = (date: Date) => {
     const start = new Date(date);
     const day = start.getDay();
-    const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Segunda como primeiro dia
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1);
     start.setDate(diff);
-    
-    return Array.from({ length: 6 }, (_, i) => { // Segunda a Sábado
+    return Array.from({ length: 6 }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return d;
@@ -1745,7 +1769,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
   };
 
   const weekDays = getWeekDays(viewDate);
-  const weekRangeLabel = `${weekDays[0].toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} - ${weekDays[5].toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+  const weekRangeLabel = `${weekDays[0].toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} - ${weekDays[5].toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}`;
 
   const changeWeek = (offset: number) => {
     const next = new Date(viewDate);
@@ -1753,14 +1777,10 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     setViewDate(next);
   };
 
-  // --- AUXILIARES DE POSICIONAMENTO ---
   const getTimeData = (timeStr: string) => {
     const [h, m] = timeStr.split(':').map(Number);
     const totalMinutes = (h * 60 + m) - (START_HOUR * 60);
-    return {
-      top: (totalMinutes / 60) * HOUR_HEIGHT,
-      minutes: totalMinutes
-    };
+    return { top: (totalMinutes / 60) * HOUR_HEIGHT };
   };
 
   const calculateHeight = (start: string, end: string) => {
@@ -1770,78 +1790,63 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     return (duration / 60) * HOUR_HEIGHT;
   };
 
-  // --- VERIFICAÇÃO DE BLOQUEIOS RECORRENTES ---
   const isBlockActiveOnDay = (block: TimeBlock, targetDate: Date) => {
     const blockDate = new Date(block.date);
     blockDate.setHours(0,0,0,0);
     const target = new Date(targetDate);
     target.setHours(0,0,0,0);
-
     if (target.getTime() === blockDate.getTime()) return true;
     if (!block.isRecurring || target < blockDate) return false;
-
     const diffDays = Math.round((target.getTime() - blockDate.getTime()) / (1000 * 60 * 60 * 24));
     const repeats = block.repeatCount || 0;
-
     switch (block.recurringType) {
-      case 'daily':
-        return diffDays <= repeats;
-      case 'weekly':
-        return diffDays % 7 === 0 && diffDays / 7 <= repeats;
-      case 'monthly':
-        return target.getDate() === blockDate.getDate() && 
-               (target.getMonth() - blockDate.getMonth() + (12 * (target.getFullYear() - blockDate.getFullYear()))) <= repeats;
-      default:
-        return false;
+      case 'daily': return diffDays <= repeats;
+      case 'weekly': return diffDays % 7 === 0 && diffDays / 7 <= repeats;
+      case 'monthly': return target.getDate() === blockDate.getDate() && (target.getMonth() - blockDate.getMonth() + (12 * (target.getFullYear() - blockDate.getFullYear()))) <= repeats;
+      default: return false;
     }
   };
 
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-700">
+    <div className="flex flex-col h-full bg-white animate-in fade-in duration-500 overflow-hidden font-sans">
       
-      {/* CABEÇALHO DA AGENDA - PALETA NUDE/BRONZE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-        <div className="flex items-center gap-4">
-          <div className="bg-[#b5967a] p-2.5 rounded-xl shadow-lg shadow-[#b5967a]/20 text-white">
-            <CalendarIcon size={20} />
-          </div>
-          <div>
-            <h3 className="text-white font-bold text-lg leading-tight uppercase tracking-tight">Vista Semanal</h3>
-            <p className="text-[#d4bca9] text-[10px] font-black uppercase tracking-[0.2em]">{weekRangeLabel}</p>
+      {/* HEADER ULTRA CLEAN */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border-b border-stone-100 bg-white gap-3">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setViewDate(new Date())} 
+            className="px-4 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-lg transition-colors"
+          >
+            Hoje
+          </button>
+          <div className="flex items-center bg-stone-50 rounded-lg border border-stone-100">
+            <button onClick={() => changeWeek(-1)} className="p-2 hover:bg-stone-200 rounded-l-lg text-stone-500 transition-colors border-r border-stone-100"><ChevronLeft size={16}/></button>
+            <span className="px-4 text-[11px] font-bold text-stone-600 uppercase tracking-wider">{weekRangeLabel}</span>
+            <button onClick={() => changeWeek(1)} className="p-2 hover:bg-stone-200 rounded-r-lg text-stone-500 transition-colors"><ChevronRight size={16}/></button>
           </div>
         </div>
 
-        <div className="flex items-center bg-stone-900 border border-white/5 p-1 rounded-2xl">
-          <button onClick={() => changeWeek(-1)} className="p-2 hover:bg-stone-800 rounded-xl text-stone-400 hover:text-white transition-all">
-            <ChevronLeft size={20}/>
-          </button>
-          <button 
-            onClick={() => setViewDate(new Date())} 
-            className="px-4 py-2 text-[10px] font-black text-stone-300 hover:text-[#b5967a] transition-colors uppercase tracking-widest"
-          >
-            HOJE
-          </button>
-          <button onClick={() => changeWeek(1)} className="p-2 hover:bg-stone-800 rounded-xl text-stone-400 hover:text-white transition-all">
-            <ChevronRight size={20}/>
-          </button>
+        <div className="hidden sm:flex items-center gap-2">
+           <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-3 border-r border-stone-100">Vista Semanal</span>
+           <Settings size={16} className="text-stone-400 cursor-pointer hover:text-stone-600" />
         </div>
       </div>
 
-      {/* ÁREA DA GRADE */}
-      <div className="flex-1 overflow-x-auto rounded-[2.5rem] border border-white/5 bg-stone-950/50 shadow-2xl">
-        <div className="min-w-[850px] relative">
+      {/* ÁREA DA GRADE EXPANDIDA */}
+      <div className="flex-1 overflow-auto bg-[#F9FAFB] relative scrollbar-thin scrollbar-thumb-stone-200">
+        <div className="min-w-[800px] md:min-w-[1100px] relative bg-white">
           
-          {/* DIAS DA SEMANA */}
-          <div className="sticky top-0 z-30 grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr] bg-stone-900 border-b border-white/10">
-            <div className="p-4 border-r border-white/5"></div>
+          {/* CABEÇALHO DOS DIAS - STICKY TOP */}
+          <div className="sticky top-0 z-30 grid grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr] bg-white border-b border-stone-100">
+            <div className="bg-stone-50/50 border-r border-stone-100"></div>
             {weekDays.map((day, i) => {
               const isToday = day.toDateString() === new Date().toDateString();
               return (
-                <div key={i} className={`p-4 text-center border-r border-white/5 last:border-0 ${isToday ? 'bg-[#b5967a]/5' : ''}`}>
-                  <p className="text-[10px] font-black text-stone-500 uppercase tracking-[0.2em] mb-1">
+                <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isToday ? 'bg-stone-50' : ''}`}>
+                  <p className={`text-[10px] font-bold uppercase mb-1 ${isToday ? 'text-[#b5967a]' : 'text-stone-400'}`}>
                     {day.toLocaleDateString('pt-PT', { weekday: 'short' })}
                   </p>
-                  <p className={`text-xl font-serif font-bold ${isToday ? 'text-[#b5967a]' : 'text-white'}`}>
+                  <p className={`text-xl font-medium ${isToday ? 'text-white bg-[#b5967a] w-9 h-9 flex items-center justify-center rounded-full mx-auto' : 'text-stone-700'}`}>
                     {day.getDate()}
                   </p>
                 </div>
@@ -1849,16 +1854,15 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
             })}
           </div>
 
-          {/* CORPO DA GRADE */}
-          <div className="relative grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr]">
+          <div className="relative grid grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr]">
             
-            {/* HORAS LATERAIS */}
-            <div className="bg-stone-900/30 border-r border-white/5 shadow-inner">
+            {/* HORAS LATERAIS - STICKY LEFT */}
+            <div className="bg-white border-r border-stone-100 sticky left-0 z-20 shadow-[5px_0_15px_rgba(0,0,0,0.02)]">
               {hours.map(hour => (
                 <div 
                   key={hour} 
-                  className="text-right pr-4 text-[10px] font-bold text-stone-600 border-b border-white/[0.03]"
-                  style={{ height: `${HOUR_HEIGHT}px`, paddingTop: '6px' }}
+                  className="text-right pr-3 text-[10px] font-medium text-stone-400 border-b border-stone-50" 
+                  style={{ height: `${HOUR_HEIGHT}px`, lineHeight: `${HOUR_HEIGHT}px` }}
                 >
                   {hour.toString().padStart(2, '0')}:00
                 </div>
@@ -1872,60 +1876,46 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
               const dayBlocks = timeBlocks.filter(b => isBlockActiveOnDay(b, day));
 
               return (
-                <div key={colIdx} className="relative border-r border-white/[0.05] last:border-0 pointer-events-auto group">
-                  {/* Linhas de fundo */}
+                <div key={colIdx} className="relative border-r border-stone-100 last:border-0 bg-white group">
+                  {/* Linhas horizontais de fundo */}
                   {hours.map(h => (
-                    <div key={h} className="border-b border-white/[0.02]" style={{ height: `${HOUR_HEIGHT}px` }} />
+                    <div key={h} className="border-b border-stone-50" style={{ height: `${HOUR_HEIGHT}px` }} />
                   ))}
 
-                  {/* BLOQUEIOS (BACKGROUND) */}
+                  {/* BLOQUEIOS (CAMADA INFERIOR) */}
                   {dayBlocks.map(block => {
                     const { top } = getTimeData(block.startTime);
                     const height = calculateHeight(block.startTime, block.endTime);
                     return (
                       <div
                         key={block.id}
-                        className="absolute left-0 right-0 z-10 bg-stone-800/40 backdrop-blur-[1px] border-y border-white/5 flex items-center justify-center overflow-hidden pointer-events-none"
+                        className="absolute left-0 right-0 z-10 bg-stone-50/80 border-y border-stone-100 flex items-center justify-center overflow-hidden pointer-events-none"
                         style={{ top: `${top}px`, height: `${height}px` }}
                       >
-                        <div className="flex items-center gap-1.5 opacity-20 rotate-[-5deg]">
-                          <Lock size={12} className="text-white" />
-                          <span className="text-[9px] font-black text-white uppercase tracking-tighter">Bloqueado</span>
-                        </div>
+                        <Lock size={12} className="text-stone-300" />
                       </div>
                     );
                   })}
 
-                  {/* AGENDAMENTOS (BRONZE THEME) */}
+                  {/* AGENDAMENTOS (ESTILO FRESHA) */}
                   {dayAppointments.map(app => {
                     const { top } = getTimeData(app.startTime);
                     const height = calculateHeight(app.startTime, app.endTime);
+                    const colorClasses = getServiceColor(app.serviceName);
+
                     return (
                       <div
                         key={app.id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation(); 
-                          onEditAppointment(app);
-                        }}
-                        className="absolute left-1.5 right-1.5 z-40 rounded-2xl bg-stone-900 border-l-4 border-[#b5967a] p-2.5 shadow-2xl ring-1 ring-white/5 hover:ring-[#b5967a]/50 hover:bg-stone-800 hover:scale-[1.02] hover:z-50 transition-all cursor-pointer group/card select-none"
-                        style={{ top: `${top}px`, height: `${height}px` }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditAppointment(app); }}
+                        className={`absolute left-1 right-1 z-40 rounded-md border-l-[4px] p-2 shadow-sm transition-all cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-95 group overflow-hidden ${colorClasses}`}
+                        style={{ top: `${top + 2}px`, height: `${height - 4}px` }}
                       >
-                        <div className="flex flex-col h-full overflow-hidden pointer-events-none">
-                          <div className="flex justify-between items-start mb-1.5">
-                            <span className="text-[9px] font-black text-[#b5967a] uppercase leading-none tracking-widest truncate pr-1">
-                              {app.startTime}
-                            </span>
-                            <Heart size={10} className="text-stone-700 group-hover/card:text-[#b5967a] transition-colors shrink-0" />
+                        <div className="flex flex-col h-full pointer-events-none">
+                          <div className="flex justify-between items-start">
+                             <p className="text-[11px] font-bold truncate leading-tight">{app.clientName}</p>
+                             <p className="text-[9px] font-medium opacity-70 whitespace-nowrap">{app.startTime}</p>
                           </div>
-                          <p className="text-xs font-bold text-white truncate leading-tight group-hover/card:text-[#d4bca9] transition-colors">
-                            {app.clientName}
-                          </p>
-                          {height > 45 && (
-                            <p className="text-[10px] text-stone-500 font-medium truncate mt-1">
-                              {app.serviceName}
-                            </p>
-                          )}
+                          <p className="text-[9px] font-medium truncate mt-0.5 opacity-80">{app.serviceName}</p>
                         </div>
                       </div>
                     );
@@ -1937,15 +1927,19 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* LEGENDA - ATUALIZADA */}
-      <div className="mt-6 flex gap-6 px-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#b5967a] shadow-lg shadow-[#b5967a]/40"></div>
-          <span className="text-[10px] font-black text-stone-500 uppercase tracking-[0.2em]">Marcações (Clicar p/ Editar)</span>
+      {/* LEGENDA SLIM NO RODAPÉ */}
+      <div className="p-3 bg-white border-t border-stone-100 flex gap-6 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-3 h-3 rounded bg-rose-100 border border-rose-200"></div>
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Manicure Gel</span>
         </div>
-        <div className="flex items-center gap-2.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-stone-800 border border-white/5"></div>
-          <span className="text-[10px] font-black text-stone-500 uppercase tracking-[0.2em]">Bloqueios</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-3 h-3 rounded bg-amber-100 border border-amber-200"></div>
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Alongamento</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-3 h-3 rounded bg-emerald-100 border border-emerald-200"></div>
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Pedicure</span>
         </div>
       </div>
     </div>
@@ -1964,7 +1958,7 @@ import { auth, db } from '../firebase';
 import { onSnapshot, query, collection, orderBy } from 'firebase/firestore';
 import { 
   LogOut, Heart, LayoutDashboard, Settings, 
-  Briefcase, Palette, Loader2 
+  Briefcase, Palette, Download 
 } from 'lucide-react';
 import { Appointment, Service } from '../types';
 import { BUSINESS_INFO, CLIENT_ID } from '../constants';
@@ -1978,9 +1972,11 @@ import AdminBookingModal from './AdminBookingModal';
 
 interface AdminDashboardProps {
   onLogout: () => void;
+  isInstallable?: boolean;
+  onInstallClick?: () => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable, onInstallClick }) => {
   // --- NAVEGAÇÃO ---
   const [activeTab, setActiveTab] = useState<'appointments' | 'services' | 'visual' | 'settings'>('appointments');
   
@@ -2016,57 +2012,88 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[120] bg-stone-950 flex flex-col text-left overflow-hidden font-sans">
+    <div className="fixed inset-0 z-[120] bg-[#f9fafb] flex flex-col text-left overflow-hidden font-sans">
       
-      {/* HEADER SLIM - ATUALIZADO PARA NUDE/GOLD */}
-      <header className="bg-stone-900 border-b border-[#b5967a]/20 p-6 z-30 shadow-2xl">
-        <div className="container mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-4">
-            {/* ÍCONE DE CORAÇÃO EM VEZ DE TESOURAS */}
-            <div className="w-12 h-12 bg-[#b5967a] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#b5967a]/20">
-              <Heart size={24} fill="currentColor" />
+      {/* HEADER PREMIUM LIGHT */}
+      <header className="bg-white border-b border-stone-200 p-4 md:p-5 z-30 shadow-sm">
+        <div className="container mx-auto flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-center">
+          
+          {/* Logo e Nome - Tons Escuros sobre Fundo Branco */}
+          <div className="flex items-center justify-between lg:justify-start gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#b5967a] rounded-xl flex items-center justify-center text-white shadow-lg shadow-[#b5967a]/20">
+                <Heart size={20} className="md:w-6 md:h-6" fill="currentColor" />
+              </div>
+              <div>
+                <h1 className="text-base md:text-xl font-serif font-bold text-stone-800 uppercase tracking-tight truncate max-w-[150px] md:max-w-none">
+                  {BUSINESS_INFO.name}
+                </h1>
+                <p className="text-[#b5967a] text-[9px] md:text-[10px] font-black uppercase tracking-widest leading-none mt-0.5 italic">Painel de Gestão</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-serif font-bold text-white uppercase tracking-tight">{BUSINESS_INFO.name}</h2>
-              <p className="text-[#d4bca9] text-[10px] font-black uppercase tracking-widest leading-none mt-1">Gestão Premium</p>
+
+            {/* Logout Mobile */}
+            <div className="flex items-center gap-3 lg:hidden">
+              {isInstallable && (
+                <button onClick={onInstallClick} className="p-2.5 bg-[#b5967a]/10 text-[#b5967a] rounded-xl border border-[#b5967a]/20">
+                  <Download size={18} />
+                </button>
+              )}
+              <button onClick={handleSignOut} className="p-2.5 text-stone-400 hover:text-red-500 transition-colors">
+                <LogOut size={20} />
+              </button>
             </div>
           </div>
 
-          <nav className="flex bg-stone-800/40 p-1 rounded-2xl border border-white/5 overflow-x-auto max-w-full no-scrollbar">
-            <TabButton 
-              active={activeTab === 'appointments'} 
-              onClick={() => setActiveTab('appointments')} 
-              icon={<LayoutDashboard size={16} />} 
-              label="MARCAÇÕES" 
-            />
-            <TabButton 
-              active={activeTab === 'services'} 
-              onClick={() => setActiveTab('services')} 
-              icon={<Briefcase size={16} />} 
-              label="SERVIÇOS" 
-            />
-            <TabButton 
-              active={activeTab === 'visual'} 
-              onClick={() => setActiveTab('visual')} 
-              icon={<Palette size={16} />} 
-              label="DESIGN" 
-            />
-            <TabButton 
-              active={activeTab === 'settings'} 
-              onClick={() => setActiveTab('settings')} 
-              icon={<Settings size={16} />} 
-              label="CONFIG" 
-            />
+          {/* Navegação por Abas - Estilo Pilulado Light */}
+          <nav className="flex bg-stone-100 p-1 rounded-2xl border border-stone-200 overflow-x-auto no-scrollbar scroll-smooth">
+            <div className="flex flex-nowrap gap-1">
+              <TabButton 
+                active={activeTab === 'appointments'} 
+                onClick={() => setActiveTab('appointments')} 
+                icon={<LayoutDashboard size={14} />} 
+                label="MARCAÇÕES" 
+              />
+              <TabButton 
+                active={activeTab === 'services'} 
+                onClick={() => setActiveTab('services')} 
+                icon={<Briefcase size={14} />} 
+                label="SERVIÇOS" 
+              />
+              <TabButton 
+                active={activeTab === 'visual'} 
+                onClick={() => setActiveTab('visual')} 
+                icon={<Palette size={14} />} 
+                label="DESIGN" 
+              />
+              <TabButton 
+                active={activeTab === 'settings'} 
+                onClick={() => setActiveTab('settings')} 
+                icon={<Settings size={14} />} 
+                label="CONFIG" 
+              />
+            </div>
           </nav>
           
-          <button onClick={handleSignOut} className="text-stone-500 hover:text-red-500 transition-colors flex items-center gap-2 font-bold text-sm">
-            <LogOut size={18} /> <span className="hidden sm:inline">Sair</span>
-          </button>
+          {/* Logout Desktop */}
+          <div className="hidden lg:flex items-center gap-6">
+            {isInstallable && (
+              <button 
+                onClick={onInstallClick} 
+                className="flex items-center gap-2 bg-[#b5967a]/10 text-[#b5967a] px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#b5967a] hover:text-white transition-all border border-[#b5967a]/20"
+              >
+                <Download size={15} /> Instalar App
+              </button>
+            )}
+            <button onClick={handleSignOut} className="text-stone-400 hover:text-red-600 transition-colors flex items-center gap-2 font-bold text-sm">
+              <LogOut size={18} /> <span className="uppercase tracking-widest text-[11px]">Sair</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* CONTEÚDO DINÂMICO */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-stone-950">
+      {/* CONTEÚDO DINÂMICO - Fundo Claro */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#f9fafb] pb-24 md:pb-8">
         <div className="container mx-auto max-w-6xl h-full">
           {activeTab === 'appointments' && (
             <DashboardAppointments 
@@ -2089,11 +2116,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         </div>
       </main>
 
-      <footer className="p-4 text-center text-stone-800 text-[10px] uppercase font-bold tracking-[0.4em] bg-stone-950 border-t border-white/5">
-        Sistema de Gestão Stacy Costa • Allan Dev v3.0
+      {/* Footer minimalista Light */}
+      <footer className="hidden md:flex p-3 text-center text-stone-400 text-[9px] uppercase font-bold tracking-[0.4em] bg-white border-t border-stone-200 justify-center items-center gap-2">
+        <span>Sistema de Gestão Stacy Costa • Allan Dev v3.7</span>
+        {isInstallable && <span className="text-[#b5967a]">• PWA Enabled</span>}
       </footer>
 
-      {/* MODAL ÚNICO GERENCIADO PELO PAI */}
+      {/* MODAL MANTIDO PELO PAI */}
       <AdminBookingModal 
         isOpen={isAdminBookingOpen} 
         onClose={() => setIsAdminBookingOpen(false)} 
@@ -2104,12 +2133,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   );
 };
 
-// Componente auxiliar para os botões da Tab - CORRIGIDO PARA #b5967a
+// Componente auxiliar TabButton Light Mode
 const TabButton = ({ active, onClick, icon, label }: any) => (
   <button 
     onClick={onClick} 
-    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
-      active ? 'bg-[#b5967a] text-white shadow-lg' : 'text-stone-400 hover:text-stone-200'
+    className={`flex items-center gap-2 px-4 py-2 md:px-5 md:py-2 rounded-xl text-[10px] md:text-xs font-black transition-all shrink-0 whitespace-nowrap tracking-wider ${
+      active 
+      ? 'bg-[#b5967a] text-white shadow-md' 
+      : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'
     }`}
   >
     {icon} {label}
@@ -2973,6 +3004,7 @@ ARQUIVO: vite.config.ts
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa'; // Importação do motor PWA
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
@@ -2981,7 +3013,40 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
-      plugins: [react()],
+      plugins: [
+        react(),
+        // Configuração da PWA para o cliente Stacy Costa Nails
+        VitePWA({
+          registerType: 'autoUpdate', // Atualiza a app no telemóvel do cliente automaticamente
+          includeAssets: ['favicon.svg', 'capa-whatsapp.webp', 'mapa.jpg'], 
+          manifest: {
+            name: 'Gestão Stacy Costa Nails',
+            short_name: 'Stacy Nails',
+            description: 'Painel de Gestão e Agendamentos Stacy Costa Nails',
+            theme_color: '#b5967a', // A cor Bronze da barra de topo no telemóvel
+            background_color: '#fdfbf7', // A cor Nude do fundo do splash screen
+            display: 'standalone', // Faz com que pareça uma app nativa (sem barra do chrome)
+            icons: [
+              {
+                src: 'pwa-192x192.png',
+                sizes: '192x192',
+                type: 'image/png'
+              },
+              {
+                src: 'pwa-512x512.png',
+                sizes: '512x512',
+                type: 'image/png'
+              },
+              {
+                src: 'pwa-512x512.png',
+                sizes: '512x512',
+                type: 'image/png',
+                purpose: 'any maskable'
+              }
+            ]
+          }
+        })
+      ],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
@@ -2993,5 +3058,4 @@ export default defineConfig(({ mode }) => {
       }
     };
 });
-
 

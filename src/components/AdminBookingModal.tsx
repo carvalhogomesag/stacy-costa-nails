@@ -14,6 +14,7 @@ import {
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { CLIENT_ID } from '../constants';
+import { COPY } from '../copy';
 import { Service, Appointment } from '../types';
 
 interface AdminBookingModalProps {
@@ -111,7 +112,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
   const handleDelete = async () => {
     if (!initialData?.id) return;
-    if (!window.confirm("Deseja eliminar esta marcação?")) return;
+    if (!window.confirm(COPY.admin.appointments.deleteConfirm)) return;
 
     setLoading(true);
     try {
@@ -126,22 +127,22 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      {/* Overlay com Blur Suave */}
-      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      {/* Overlay com Blur Semântico */}
+      <div className="fixed inset-0 bg-brand-footer/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-      <div className="relative bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 z-[210]">
+      <div className="relative bg-brand-card w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 z-[210]">
         
-        {/* Header Estilo Fresha */}
-        <div className="p-6 border-b border-stone-100 bg-white flex justify-between items-center">
+        {/* Header Estilo Admin Premium */}
+        <div className="p-6 border-b border-stone-100 bg-brand-card flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 ${initialData ? 'bg-[#b5967a]' : 'bg-stone-800'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
+            <div className={`w-12 h-12 ${initialData ? 'bg-primary' : 'bg-primary-dark'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
               {initialData ? <Calendar size={22} /> : <Plus size={22} />}
             </div>
             <div>
-              <h2 className="text-stone-800 font-bold text-lg leading-tight uppercase tracking-tight">
+              <h2 className="text-primary-dark font-bold text-lg leading-tight uppercase tracking-tight">
                 {initialData ? 'Detalhes da Marcação' : 'Nova Marcação Manual'}
               </h2>
-              <p className="text-[#b5967a] text-[10px] font-black uppercase tracking-widest mt-0.5">
+              <p className="text-primary text-[10px] font-black uppercase tracking-widest mt-0.5">
                 {initialData ? 'Editar Registo' : 'Painel de Gestão'}
               </p>
             </div>
@@ -151,18 +152,18 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6 bg-white">
+        <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6 bg-brand-card">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Nome do Cliente */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-                <User size={12} className="text-[#b5967a]" /> Nome do Cliente
+                <User size={12} className="text-primary" /> {COPY.bookingModal.placeholders.name}
               </label>
               <input 
                 required
                 type="text"
                 placeholder="Ex: Maria Silva"
-                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all font-medium"
                 value={formData.clientName}
                 onChange={e => setFormData({...formData, clientName: e.target.value})}
               />
@@ -171,13 +172,13 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             {/* Telemóvel */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-                <Phone size={12} className="text-[#b5967a]" /> Telemóvel
+                <Phone size={12} className="text-primary" /> {COPY.bookingModal.placeholders.phone}
               </label>
               <input 
                 required
                 type="tel"
                 placeholder="9xx xxx xxx"
-                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all font-medium"
                 value={formData.clientPhone}
                 onChange={e => setFormData({...formData, clientPhone: e.target.value})}
               />
@@ -187,11 +188,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
           {/* Seleção de Serviço */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-              <Scissors size={12} className="text-[#b5967a]" /> Serviço
+              <Scissors size={12} className="text-primary" /> {COPY.admin.dashboard.tabs.services}
             </label>
             <select 
               required
-              className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all appearance-none font-medium"
+              className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all appearance-none font-medium"
               value={formData.serviceId}
               onChange={e => setFormData({...formData, serviceId: e.target.value})}
             >
@@ -206,12 +207,12 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             {/* Data */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-                <Calendar size={12} className="text-[#b5967a]" /> Data
+                <Calendar size={12} className="text-primary" /> Data
               </label>
               <input 
                 required
                 type="date"
-                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all font-medium"
                 value={formData.date}
                 onChange={e => setFormData({...formData, date: e.target.value})}
               />
@@ -220,11 +221,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             {/* Hora de Início */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-                <Clock size={12} className="text-[#b5967a]" /> Início
+                <Clock size={12} className="text-primary" /> Início
               </label>
               <select 
                 required
-                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all appearance-none font-medium text-center"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all appearance-none font-medium text-center"
                 value={formData.startTime}
                 onChange={e => setFormData({...formData, startTime: e.target.value})}
               >
@@ -249,7 +250,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             <button 
               type="submit"
               disabled={loading}
-              className="flex-1 py-4 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98] uppercase tracking-widest text-xs"
+              className="flex-1 py-4 bg-primary hover:bg-primary-hover text-white font-black rounded-xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98] uppercase tracking-widest text-xs"
             >
               {loading ? <Loader2 className="animate-spin" /> : (
                 <><Save size={18} /> {initialData ? 'Atualizar Marcação' : 'Confirmar Agenda'}</>

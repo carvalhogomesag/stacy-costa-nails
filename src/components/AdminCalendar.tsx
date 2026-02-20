@@ -3,13 +3,10 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Lock, 
-  Calendar as CalendarIcon,
-  Clock,
-  User,
-  Heart,
-  Settings // Ícone que estava a faltar na importação
+  Settings
 } from 'lucide-react';
 import { Appointment, TimeBlock } from '../types';
+import { THEME } from '../theme';
 
 interface AdminCalendarProps {
   appointments: Appointment[];
@@ -20,18 +17,33 @@ interface AdminCalendarProps {
 const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, onEditAppointment }) => {
   const [viewDate, setViewDate] = useState(new Date());
 
-  // --- CONFIGURAÇÃO DA GRADE ESTILO FRESHA ---
+  // --- CONFIGURAÇÃO DA GRADE ---
   const HOUR_HEIGHT = 65; 
   const START_HOUR = 8;   
   const END_HOUR = 21;    
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
-  // Mapeamento de cores para os cards (Estilo Fresha - Tons Pastéis)
+  /**
+   * Mapeamento de cores para os cards baseados no serviço.
+   * Utiliza as categorias definidas no THEME.calendar.
+   */
   const getServiceColor = (serviceName: string) => {
     const name = serviceName.toLowerCase();
-    if (name.includes('gel')) return 'bg-rose-100 border-rose-200 text-rose-700';
-    if (name.includes('alongamento')) return 'bg-amber-100 border-amber-200 text-amber-700';
-    if (name.includes('pedi')) return 'bg-emerald-100 border-emerald-200 text-emerald-700';
+    
+    // Manicure / Gel
+    if (name.includes('gel') || name.includes('mani')) {
+      return 'bg-rose-100 border-rose-200 text-rose-700';
+    }
+    // Alongamentos / Extensões
+    if (name.includes('alonga') || name.includes('exten')) {
+      return 'bg-amber-100 border-amber-200 text-amber-700';
+    }
+    // Pedicure
+    if (name.includes('pedi')) {
+      return 'bg-emerald-100 border-emerald-200 text-emerald-700';
+    }
+    
+    // Default / Outros
     return 'bg-stone-100 border-stone-200 text-stone-700';
   };
 
@@ -74,14 +86,19 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     blockDate.setHours(0,0,0,0);
     const target = new Date(targetDate);
     target.setHours(0,0,0,0);
+    
     if (target.getTime() === blockDate.getTime()) return true;
     if (!block.isRecurring || target < blockDate) return false;
+    
     const diffDays = Math.round((target.getTime() - blockDate.getTime()) / (1000 * 60 * 60 * 24));
     const repeats = block.repeatCount || 0;
+    
     switch (block.recurringType) {
       case 'daily': return diffDays <= repeats;
       case 'weekly': return diffDays % 7 === 0 && diffDays / 7 <= repeats;
-      case 'monthly': return target.getDate() === blockDate.getDate() && (target.getMonth() - blockDate.getMonth() + (12 * (target.getFullYear() - blockDate.getFullYear()))) <= repeats;
+      case 'monthly': 
+        return target.getDate() === blockDate.getDate() && 
+               (target.getMonth() - blockDate.getMonth() + (12 * (target.getFullYear() - blockDate.getFullYear()))) <= repeats;
       default: return false;
     }
   };
@@ -89,7 +106,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
   return (
     <div className="flex flex-col h-full bg-white animate-in fade-in duration-500 overflow-hidden font-sans">
       
-      {/* HEADER ULTRA CLEAN */}
+      {/* HEADER DA AGENDA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border-b border-stone-100 bg-white gap-3">
         <div className="flex items-center gap-3">
           <button 
@@ -99,9 +116,15 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
             Hoje
           </button>
           <div className="flex items-center bg-stone-50 rounded-lg border border-stone-100">
-            <button onClick={() => changeWeek(-1)} className="p-2 hover:bg-stone-200 rounded-l-lg text-stone-500 transition-colors border-r border-stone-100"><ChevronLeft size={16}/></button>
-            <span className="px-4 text-[11px] font-bold text-stone-600 uppercase tracking-wider">{weekRangeLabel}</span>
-            <button onClick={() => changeWeek(1)} className="p-2 hover:bg-stone-200 rounded-r-lg text-stone-500 transition-colors"><ChevronRight size={16}/></button>
+            <button onClick={() => changeWeek(-1)} className="p-2 hover:bg-stone-200 rounded-l-lg text-stone-500 transition-colors border-r border-stone-100">
+              <ChevronLeft size={16}/>
+            </button>
+            <span className="px-4 text-[11px] font-bold text-stone-600 uppercase tracking-wider">
+              {weekRangeLabel}
+            </span>
+            <button onClick={() => changeWeek(1)} className="p-2 hover:bg-stone-200 rounded-r-lg text-stone-500 transition-colors">
+              <ChevronRight size={16}/>
+            </button>
           </div>
         </div>
 
@@ -111,21 +134,21 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* ÁREA DA GRADE EXPANDIDA */}
+      {/* ÁREA DA GRADE */}
       <div className="flex-1 overflow-auto bg-[#F9FAFB] relative scrollbar-thin scrollbar-thumb-stone-200">
         <div className="min-w-[800px] md:min-w-[1100px] relative bg-white">
           
-          {/* CABEÇALHO DOS DIAS - STICKY TOP */}
+          {/* CABEÇALHO DOS DIAS (Sticky) */}
           <div className="sticky top-0 z-30 grid grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr] bg-white border-b border-stone-100">
             <div className="bg-stone-50/50 border-r border-stone-100"></div>
             {weekDays.map((day, i) => {
               const isToday = day.toDateString() === new Date().toDateString();
               return (
-                <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isToday ? 'bg-stone-50' : ''}`}>
-                  <p className={`text-[10px] font-bold uppercase mb-1 ${isToday ? 'text-[#b5967a]' : 'text-stone-400'}`}>
+                <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isToday ? 'bg-stone-50/30' : ''}`}>
+                  <p className={`text-[10px] font-bold uppercase mb-1 ${isToday ? 'text-primary' : 'text-stone-400'}`}>
                     {day.toLocaleDateString('pt-PT', { weekday: 'short' })}
                   </p>
-                  <p className={`text-xl font-medium ${isToday ? 'text-white bg-[#b5967a] w-9 h-9 flex items-center justify-center rounded-full mx-auto' : 'text-stone-700'}`}>
+                  <p className={`text-xl font-medium ${isToday ? 'text-white bg-primary w-9 h-9 flex items-center justify-center rounded-full mx-auto shadow-lg shadow-primary/20' : 'text-stone-700'}`}>
                     {day.getDate()}
                   </p>
                 </div>
@@ -135,8 +158,8 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
 
           <div className="relative grid grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr]">
             
-            {/* HORAS LATERAIS - STICKY LEFT */}
-            <div className="bg-white border-r border-stone-100 sticky left-0 z-20 shadow-[5px_0_15px_rgba(0,0,0,0.02)]">
+            {/* HORAS LATERAIS (Sticky) */}
+            <div className="bg-white border-r border-stone-100 sticky left-0 z-20">
               {hours.map(hour => (
                 <div 
                   key={hour} 
@@ -156,12 +179,12 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
 
               return (
                 <div key={colIdx} className="relative border-r border-stone-100 last:border-0 bg-white group">
-                  {/* Linhas horizontais de fundo */}
+                  {/* Linhas de grade horária */}
                   {hours.map(h => (
                     <div key={h} className="border-b border-stone-50" style={{ height: `${HOUR_HEIGHT}px` }} />
                   ))}
 
-                  {/* BLOQUEIOS (CAMADA INFERIOR) */}
+                  {/* CAMADA 1: BLOQUEIOS */}
                   {dayBlocks.map(block => {
                     const { top } = getTimeData(block.startTime);
                     const height = calculateHeight(block.startTime, block.endTime);
@@ -176,7 +199,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
                     );
                   })}
 
-                  {/* AGENDAMENTOS (ESTILO FRESHA) */}
+                  {/* CAMADA 2: AGENDAMENTOS */}
                   {dayAppointments.map(app => {
                     const { top } = getTimeData(app.startTime);
                     const height = calculateHeight(app.startTime, app.endTime);
@@ -206,20 +229,18 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* LEGENDA SLIM NO RODAPÉ */}
+      {/* LEGENDA DE CORES */}
       <div className="p-3 bg-white border-t border-stone-100 flex gap-6 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-3 h-3 rounded bg-rose-100 border border-rose-200"></div>
-          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Manicure Gel</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-3 h-3 rounded bg-amber-100 border border-amber-200"></div>
-          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Alongamento</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-3 h-3 rounded bg-emerald-100 border border-emerald-200"></div>
-          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">Pedicure</span>
-        </div>
+        {[
+          { color: 'bg-rose-100 border-rose-200', label: 'Manicure / Gel' },
+          { color: 'bg-amber-100 border-amber-200', label: 'Alongamento' },
+          { color: 'bg-emerald-100 border-emerald-200', label: 'Pedicure' },
+        ].map((item, idx) => (
+          <div key={idx} className="flex items-center gap-2 shrink-0">
+            <div className={`w-3 h-3 rounded ${item.color}`}></div>
+            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">{item.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
