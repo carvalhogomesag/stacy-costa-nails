@@ -9,7 +9,7 @@ import {
   Loader2, 
   Save, 
   Trash2, 
-  Plus // Ícone que estava faltando
+  Plus 
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -67,7 +67,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     setLoading(true);
 
     const selectedService = services.find(s => s.id === formData.serviceId);
-    if (!selectedService) return;
+    if (!selectedService) {
+      alert("Por favor, selecione um serviço.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const [h, m] = formData.startTime.split(':').map(Number);
@@ -98,8 +102,8 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
       onClose();
     } catch (error) {
-      console.error("Erro ao salvar:", error);
-      alert("Erro ao processar a operação.");
+      console.error(error);
+      alert("Erro ao processar a marcação.");
     } finally {
       setLoading(false);
     }
@@ -107,14 +111,13 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
   const handleDelete = async () => {
     if (!initialData?.id) return;
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este agendamiento?")) return;
+    if (!window.confirm("Deseja eliminar esta marcação?")) return;
 
     setLoading(true);
     try {
       await deleteDoc(doc(db, "businesses", CLIENT_ID, "appointments", initialData.id));
       onClose();
     } catch (error) {
-      console.error("Erro ao deletar:", error);
       alert("Erro ao eliminar.");
     } finally {
       setLoading(false);
@@ -122,98 +125,106 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      {/* Overlay com Blur Suave */}
+      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-      <div className="relative bg-stone-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="relative bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 z-[210]">
         
-        {/* Header */}
-        <div className="p-6 border-b border-white/5 bg-stone-900/50 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 ${initialData ? 'bg-amber-500' : 'bg-rose-600'} rounded-xl flex items-center justify-center text-white transition-colors`}>
-              {initialData ? <Calendar size={20} /> : <Plus size={20} />}
+        {/* Header Estilo Fresha */}
+        <div className="p-6 border-b border-stone-100 bg-white flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 ${initialData ? 'bg-[#b5967a]' : 'bg-stone-800'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
+              {initialData ? <Calendar size={22} /> : <Plus size={22} />}
             </div>
             <div>
-              <h2 className="text-white font-bold text-lg">
-                {initialData ? 'Detalles de la Cita' : 'Nueva Marcação Manual'}
+              <h2 className="text-stone-800 font-bold text-lg leading-tight uppercase tracking-tight">
+                {initialData ? 'Detalhes da Marcação' : 'Nova Marcação Manual'}
               </h2>
-              <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest">
-                {initialData ? 'Editar Agendamiento' : 'Painel de Gestão'}
+              <p className="text-[#b5967a] text-[10px] font-black uppercase tracking-widest mt-0.5">
+                {initialData ? 'Editar Registo' : 'Painel de Gestão'}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-stone-500 transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-stone-50 rounded-full text-stone-400 transition-colors">
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-8 space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-                <User size={12} /> Cliente
+        <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6 bg-white">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Nome do Cliente */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <User size={12} className="text-[#b5967a]" /> Nome do Cliente
               </label>
               <input 
                 required
                 type="text"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all"
+                placeholder="Ex: Maria Silva"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
                 value={formData.clientName}
                 onChange={e => setFormData({...formData, clientName: e.target.value})}
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-                <Phone size={12} /> Telemóvel
+            {/* Telemóvel */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <Phone size={12} className="text-[#b5967a]" /> Telemóvel
               </label>
               <input 
                 required
                 type="tel"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all"
+                placeholder="9xx xxx xxx"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
                 value={formData.clientPhone}
                 onChange={e => setFormData({...formData, clientPhone: e.target.value})}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-              <Scissors size={12} /> Serviço
+          {/* Seleção de Serviço */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+              <Scissors size={12} className="text-[#b5967a]" /> Serviço
             </label>
             <select 
               required
-              className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all appearance-none"
+              className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all appearance-none font-medium"
               value={formData.serviceId}
               onChange={e => setFormData({...formData, serviceId: e.target.value})}
             >
               <option value="">Selecione um serviço...</option>
               {services.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.duration} min - {s.price})</option>
+                <option key={s.id} value={s.id}>{s.name} ({s.duration} min)</option>
               ))}
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-                <Calendar size={12} /> Data
+          <div className="grid grid-cols-2 gap-5">
+            {/* Data */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <Calendar size={12} className="text-[#b5967a]" /> Data
               </label>
               <input 
                 required
                 type="date"
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all color-scheme-dark"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all font-medium"
                 value={formData.date}
                 onChange={e => setFormData({...formData, date: e.target.value})}
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-500 uppercase ml-1 flex items-center gap-2">
-                <Clock size={12} /> Início
+            {/* Hora de Início */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <Clock size={12} className="text-[#b5967a]" /> Início
               </label>
               <select 
                 required
-                className="w-full bg-stone-950 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-rose-500/50 transition-all appearance-none"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-stone-800 outline-none focus:border-[#b5967a] focus:bg-white transition-all appearance-none font-medium text-center"
                 value={formData.startTime}
                 onChange={e => setFormData({...formData, startTime: e.target.value})}
               >
@@ -222,26 +233,26 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-4 pt-4">
             {initialData && (
               <button 
                 type="button"
                 onClick={handleDelete}
                 disabled={loading}
-                className="flex-none p-5 bg-stone-800 hover:bg-red-900/40 text-red-500 rounded-2xl transition-all active:scale-95"
-                title="Eliminar agendamiento"
+                className="flex-none p-4 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-all active:scale-95 border border-red-100"
+                title="Eliminar marcação"
               >
-                <Trash2 size={20} />
+                <Trash2 size={22} />
               </button>
             )}
             
             <button 
               type="submit"
               disabled={loading}
-              className={`flex-1 py-5 ${initialData ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'} text-white font-black rounded-2xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98]`}
+              className="flex-1 py-4 bg-[#b5967a] hover:bg-[#a38569] text-white font-black rounded-xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98] uppercase tracking-widest text-xs"
             >
               {loading ? <Loader2 className="animate-spin" /> : (
-                <><Save size={20} /> {initialData ? 'Actualizar Cita' : 'Confirmar Agendamento'}</>
+                <><Save size={18} /> {initialData ? 'Atualizar Marcação' : 'Confirmar Agenda'}</>
               )}
             </button>
           </div>
