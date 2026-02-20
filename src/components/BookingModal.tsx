@@ -87,7 +87,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  // --- MOTOR LÓGICO DE DISPONIBILIDADE (Preservado integralmente) ---
+  // --- MOTOR LÓGICO DE DISPONIBILIDADE ---
   const generateAvailableTimes = () => {
     if (!workConfig || !selectedService) return [];
     
@@ -173,9 +173,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
       const endTotal = (h * 60) + m + selectedService.duration;
       const endTimeStr = `${Math.floor(endTotal/60).toString().padStart(2,'0')}:${(endTotal%60).toString().padStart(2,'0')}`;
 
+      // Payload com serviceColor dinâmico
       await addDoc(collection(db, "businesses", CLIENT_ID, "appointments"), {
         serviceId: selectedService.id,
         serviceName: selectedService.name,
+        serviceColor: selectedService.color || '#f5f5f4', // Grava a cor do serviço para o calendário admin
         clientName: formData.name,
         clientPhone: formData.phone,
         date: selectedDate,
@@ -184,7 +186,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
         createdAt: serverTimestamp()
       });
       setStep(5);
-    } catch (e) { alert("Erro ao realizar a marcação."); }
+    } catch (e) { 
+      console.error(e);
+      alert("Erro ao realizar a marcação."); 
+    }
     setLoading(false);
   };
 
@@ -219,7 +224,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
                 dbServices.map((s) => (
                   <button key={s.id} onClick={() => { setSelectedService(s); setStep(2); }} className="w-full flex justify-between items-center p-5 rounded-2xl bg-black/20 border border-white/5 hover:border-primary/50 group transition-all text-left shadow-lg">
                     <div className="flex-1 pr-4">
-                      <h3 className="text-white font-bold group-hover:text-primary-light transition-colors">{s.name}</h3>
+                      <div className="flex items-center gap-3">
+                         {s.color && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />}
+                         <h3 className="text-white font-bold group-hover:text-primary-light transition-colors">{s.name}</h3>
+                      </div>
                       <div className="flex items-center gap-3 mt-1.5 text-stone-500 text-xs font-medium uppercase tracking-tighter">
                         <Clock size={12} className="text-primary"/> {s.duration} min | <span className="text-primary font-black">{s.price}</span>
                       </div>

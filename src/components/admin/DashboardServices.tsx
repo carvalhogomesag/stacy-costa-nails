@@ -4,22 +4,33 @@ import {
   collection, query, orderBy, onSnapshot, 
   deleteDoc, doc, addDoc, serverTimestamp 
 } from 'firebase/firestore';
-import { Plus, Briefcase, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Briefcase, Trash2, Loader2, Check } from 'lucide-react';
 import { Service } from '../../types';
 import { CLIENT_ID } from '../../constants';
 import { COPY } from '../../copy';
+
+// Paleta de Cores Pastel Profissionais (Luxury Style)
+const PRESET_COLORS = [
+  { name: 'Rose', hex: '#ffe4e6', text: '#b91c1c' },
+  { name: 'Amber', hex: '#fef3c7', text: '#b45309' },
+  { name: 'Emerald', hex: '#d1fae5', text: '#047857' },
+  { name: 'Sky', hex: '#e0f2fe', text: '#0369a1' },
+  { name: 'Violet', hex: '#ede9fe', text: '#6d28d9' },
+  { name: 'Stone', hex: '#f5f5f4', text: '#44403c' },
+];
 
 const DashboardServices: React.FC = () => {
   const [dbServices, setDbServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ESTADO PARA NOVO SERVIÇO
+  // ESTADO PARA NOVO SERVIÇO COM CAMPO DE COR
   const [newService, setNewService] = useState({ 
     name: '', 
     description: '', 
     price: '', 
-    duration: 30 
+    duration: 30,
+    color: PRESET_COLORS[0].hex
   });
 
   // ESCUTAR SERVIÇOS DO FIRESTORE (Multi-tenant)
@@ -51,7 +62,14 @@ const DashboardServices: React.FC = () => {
         ...newService, 
         createdAt: serverTimestamp() 
       });
-      setNewService({ name: '', description: '', price: '', duration: 30 });
+      // Resetar formulário incluindo a cor padrão
+      setNewService({ 
+        name: '', 
+        description: '', 
+        price: '', 
+        duration: 30, 
+        color: PRESET_COLORS[0].hex 
+      });
     } catch (error) {
       console.error("Erro ao criar serviço:", error);
       alert("Erro ao criar serviço.");
@@ -73,7 +91,7 @@ const DashboardServices: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       
-      {/* FORMULÁRIO DE CRIAÇÃO - ESTILO CLEAN CARD */}
+      {/* FORMULÁRIO DE CRIAÇÃO */}
       <form 
         onSubmit={handleAddService} 
         className="bg-brand-card border border-stone-100 p-6 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm space-y-6"
@@ -126,6 +144,28 @@ const DashboardServices: React.FC = () => {
           </div>
         </div>
 
+        {/* SELETOR DE COR DO SERVIÇO */}
+        <div className="space-y-3">
+          <label className="text-[10px] uppercase font-bold text-stone-400 ml-1 tracking-widest">
+            Identificador Visual (Cor na Agenda)
+          </label>
+          <div className="flex flex-wrap gap-3">
+            {PRESET_COLORS.map((color) => (
+              <button
+                key={color.hex}
+                type="button"
+                onClick={() => setNewService({...newService, color: color.hex})}
+                className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center shadow-sm ${newService.color === color.hex ? 'border-primary-dark scale-110' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                style={{ backgroundColor: color.hex }}
+              >
+                {newService.color === color.hex && (
+                  <Check size={16} style={{ color: color.text }} />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-1.5">
            <label className="text-[10px] uppercase font-bold text-stone-400 ml-1 tracking-widest">
              {COPY.admin.services.form.desc}
@@ -147,7 +187,7 @@ const DashboardServices: React.FC = () => {
         </button>
       </form>
 
-      {/* LISTA DE SERVIÇOS - ESTILO CLEAN LIST */}
+      {/* LISTA DE SERVIÇOS */}
       <div className="space-y-4">
         <h4 className="text-stone-400 text-[10px] font-bold uppercase tracking-[0.3em] ml-2 mb-2">
           {COPY.admin.services.listTitle}
@@ -171,8 +211,11 @@ const DashboardServices: React.FC = () => {
                 className="bg-brand-card border border-stone-100 p-4 md:p-6 rounded-xl md:rounded-2xl flex justify-between items-center group transition-all hover:border-primary/30 shadow-sm"
               >
                 <div className="flex items-center gap-4 md:gap-5">
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-stone-50 border border-stone-100 rounded-xl flex items-center justify-center text-primary shrink-0">
-                    <Briefcase size={18} className="md:w-5 md:h-5"/>
+                  <div 
+                    className="w-10 h-10 md:w-12 md:h-12 border border-black/5 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
+                    style={{ backgroundColor: s.color || '#f5f5f4' }}
+                  >
+                    <Briefcase size={18} className="text-primary-dark/30"/>
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-primary-dark font-bold text-sm md:text-lg truncate leading-tight">{s.name}</h4>

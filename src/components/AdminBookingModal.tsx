@@ -56,6 +56,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
   if (!isOpen) return null;
 
+  // Opções de tempo em blocos de 15 minutos (08h às 21h)
   const timeOptions = Array.from({ length: 53 }, (_, i) => {
     const totalMinutes = 8 * 60 + i * 15;
     const h = Math.floor(totalMinutes / 60);
@@ -75,16 +76,19 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     }
 
     try {
+      // Cálculo de EndTime baseado na duração do serviço
       const [h, m] = formData.startTime.split(':').map(Number);
       const startInMinutes = h * 60 + m;
       const endInMinutes = startInMinutes + selectedService.duration;
       const endTime = `${Math.floor(endInMinutes / 60).toString().padStart(2, '0')}:${(endInMinutes % 60).toString().padStart(2, '0')}`;
 
+      // Objeto de dados com a cor injetada
       const appointmentData = {
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
+        serviceColor: selectedService.color || '#f5f5f4', // Desnormalização da cor para o calendário
         date: formData.date,
         startTime: formData.startTime,
         endTime: endTime,
@@ -92,9 +96,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
       };
 
       if (initialData?.id) {
+        // Atualizar marcação existente
         const docRef = doc(db, "businesses", CLIENT_ID, "appointments", initialData.id);
         await updateDoc(docRef, appointmentData);
       } else {
+        // Criar nova marcação
         await addDoc(collection(db, "businesses", CLIENT_ID, "appointments"), {
           ...appointmentData,
           createdAt: serverTimestamp()
@@ -124,6 +130,9 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
       setLoading(false);
     }
   };
+
+  // Helper para mostrar a cor do serviço selecionado no formulário
+  const currentServiceColor = services.find(s => s.id === formData.serviceId)?.color || 'transparent';
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -185,11 +194,17 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          {/* Seleção de Serviço */}
+          {/* Seleção de Serviço com Preview de Cor */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-              <Scissors size={12} className="text-primary" /> {COPY.admin.dashboard.tabs.services}
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <Scissors size={12} className="text-primary" /> {COPY.admin.dashboard.tabs.services}
+              </label>
+              <div 
+                className="w-4 h-4 rounded-full border border-black/10 shadow-sm transition-all duration-300"
+                style={{ backgroundColor: currentServiceColor }}
+              />
+            </div>
             <select 
               required
               className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all appearance-none font-medium"

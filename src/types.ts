@@ -6,6 +6,7 @@ export interface Service {
   description: string;
   price: string;
   duration: number; 
+  color?: string; // NOVO: Cor hexadecimal escolhida pelo profissional
 }
 
 export interface Review {
@@ -20,6 +21,7 @@ export interface Appointment {
   id?: string;
   serviceId: string;
   serviceName: string;
+  serviceColor?: string; // NOVO: Cor do serviço no momento da marcação (para performance do calendário)
   clientName: string;
   clientPhone: string;
   date: string; 
