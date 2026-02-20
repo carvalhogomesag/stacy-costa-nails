@@ -30,6 +30,14 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [formData, setFormData] = useState({ name: '', phone: '' });
 
+  // Helper para data local YYYY-MM-DD
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // 1. Resetar ao fechar
   useEffect(() => {
     if (!isOpen) {
@@ -41,7 +49,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // 2. Escutar Dados Globais (Multi-tenant)
+  // 2. Escutar Dados Globais
   useEffect(() => {
     if (isOpen) {
       setLoadingData(true);
@@ -63,7 +71,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // 3. Buscar Agendamentos Ocupados para a data selecionada
+  // 3. Buscar Agendamentos Ocupados
   useEffect(() => {
     if (selectedDate && isOpen) {
       const fetchBookings = async () => {
@@ -99,6 +107,12 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
     const dayEndMin = endH * 60 + endM;
     const interval = 30;
 
+    // Dados para bloquear horários passados
+    const now = new Date();
+    const todayStr = formatDateLocal(now);
+    const currentTotalMinutes = (now.getHours() * 60) + now.getMinutes();
+    const minLeadTime = 15; // Margem de 15 minutos de antecedência mínima
+
     const breakStart = workConfig.breakStart ? workConfig.breakStart.split(':').map(Number).reduce((h, m) => h * 60 + m) : null;
     const breakEnd = workConfig.breakEnd ? workConfig.breakEnd.split(':').map(Number).reduce((h, m) => h * 60 + m) : null;
 
@@ -110,17 +124,24 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
 
       let isBlocked = false;
 
-      // Check Almoço/Pausa
-      if (breakStart !== null && breakEnd !== null) {
+      // REGRA 1: Bloquear horários que já passaram (se for hoje)
+      if (selectedDate === todayStr) {
+        if (currentMin <= currentTotalMinutes + minLeadTime) {
+          isBlocked = true;
+        }
+      }
+
+      // REGRA 2: Check Almoço/Pausa
+      if (!isBlocked && breakStart !== null && breakEnd !== null) {
         if (currentMin < breakEnd && slotEnd > breakStart) isBlocked = true;
       }
 
-      // Check Ocupação de Agendamentos
+      // REGRA 3: Check Ocupação de Agendamentos
       if (!isBlocked) {
         isBlocked = occupiedSlots.some(busy => currentMin < busy.end && slotEnd > busy.start);
       }
 
-      // Check Bloqueios de Agenda (Férias/Formação/Recorrência)
+      // REGRA 4: Check Bloqueios Administrativos
       if (!isBlocked) {
         isBlocked = timeBlocks.some(block => {
           const [bsh, bsm] = block.startTime.split(':').map(Number);
@@ -159,7 +180,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
       d.setDate(d.getDate() + i);
       const dayOfWeek = d.getDay();
       if (workConfig && !workConfig.daysOff.includes(dayOfWeek)) {
-        days.push(d.toISOString().split('T')[0]);
+        days.push(formatDateLocal(d));
       }
     }
     return days;
@@ -173,11 +194,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
       const endTotal = (h * 60) + m + selectedService.duration;
       const endTimeStr = `${Math.floor(endTotal/60).toString().padStart(2,'0')}:${(endTotal%60).toString().padStart(2,'0')}`;
 
-      // Payload com serviceColor dinâmico
       await addDoc(collection(db, "businesses", CLIENT_ID, "appointments"), {
         serviceId: selectedService.id,
         serviceName: selectedService.name,
-        serviceColor: selectedService.color || '#f5f5f4', // Grava a cor do serviço para o calendário admin
+        serviceColor: selectedService.color || '#f5f5f4',
         clientName: formData.name,
         clientPhone: formData.phone,
         date: selectedDate,
@@ -195,12 +215,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 text-left font-sans">
-      {/* OVERLAY ESFUMADO */}
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
       
       <div className="relative bg-brand-footer border border-primary/30 w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-300 z-[160]">
         
-        {/* Header Centralizado */}
         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-brand-footer/50">
           <div>
             <h2 className="text-xl font-bold text-white font-serif tracking-tight uppercase">{COPY.bookingModal.title}</h2>
@@ -211,7 +229,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
 
         <div className="p-6 max-h-[75vh] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-800">
           
-          {/* STEP 1: Serviços */}
           {step === 1 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <p className="text-stone-400 text-sm mb-4 font-light">{COPY.bookingModal.steps.services}</p>
@@ -239,7 +256,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* STEP 2: Data */}
           {step === 2 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <button onClick={() => setStep(1)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-primary transition-colors uppercase tracking-widest font-bold"><ChevronLeft size={14}/> {COPY.bookingModal.buttons.back}</button>
@@ -255,7 +271,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* STEP 3: Horário */}
           {step === 3 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <button onClick={() => setStep(2)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-primary transition-colors uppercase tracking-widest font-bold"><ChevronLeft size={14}/> {COPY.bookingModal.buttons.back}</button>
@@ -279,7 +294,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* STEP 4: Dados Pessoais */}
           {step === 4 && (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
               <button onClick={() => setStep(3)} className="text-stone-500 text-xs flex items-center gap-1 hover:text-primary transition-colors uppercase tracking-widest font-bold"><ChevronLeft size={14}/> {COPY.bookingModal.buttons.back}</button>
@@ -300,7 +314,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* STEP 5: Sucesso */}
           {step === 5 && (
             <div className="py-12 text-center space-y-6 animate-in zoom-in duration-500">
               <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary shadow-inner border border-primary/20">
