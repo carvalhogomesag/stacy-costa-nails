@@ -22,15 +22,21 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
   const [appointmentsMode, setAppointmentsMode] = useState<'calendar' | 'list'>('calendar');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
-  const [dbServices, setDbServices] = useState<Service[]>([]); // Estado para os serviços
+  const [dbServices, setDbServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper para data local YYYY-MM-DD
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = formatDateLocal(new Date());
     
-    // 1. Escutar Agendamentos
+    // 1. Escutar Agendamentos (Multi-tenant)
     const qApp = query(
       collection(db, "businesses", CLIENT_ID, "appointments"), 
       where("date", ">=", todayStr), 
@@ -41,12 +47,12 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
       setLoading(false);
     });
 
-    // 2. Escutar Bloqueios
+    // 2. Escutar Bloqueios de Agenda
     const unsubBlocks = onSnapshot(collection(db, "businesses", CLIENT_ID, "timeBlocks"), (snap) => {
       setTimeBlocks(snap.docs.map(d => ({ id: d.id, ...d.data() } as TimeBlock)));
     });
 
-    // 3. Escutar Serviços (para a legenda do calendário)
+    // 3. Escutar Serviços (para cores e legenda)
     const unsubServices = onSnapshot(collection(db, "businesses", CLIENT_ID, "services"), (snap) => {
       setDbServices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Service)));
     });
@@ -77,7 +83,8 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
   return (
     <div className="animate-in fade-in duration-500 h-full flex flex-col overflow-hidden">
       
-      <div className="flex items-center justify-between mb-2 md:mb-5 gap-2 px-1">
+      {/* Cabeçalho da Aba */}
+      <div className="flex items-center justify-between mb-4 md:mb-6 gap-2 px-1">
         <div className="flex items-center gap-2">
           <CalendarIcon className="text-primary w-4 h-4 md:w-6 md:h-6"/> 
           <h3 className="text-primary-dark font-bold text-sm md:text-lg uppercase tracking-tight">
@@ -86,6 +93,7 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Botão Nova Marcação */}
           <button 
             onClick={onNewBooking}
             className="flex items-center justify-center gap-1.5 bg-primary hover:bg-primary-hover text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all shadow-lg active:scale-95 uppercase tracking-wider"
@@ -93,16 +101,19 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
             <Plus size={14} strokeWidth={3} /> <span className="hidden xs:inline">{COPY.admin.appointments.newBtn}</span>
           </button>
 
+          {/* Selector de Vista (Calendário / Lista) */}
           <div className="flex bg-stone-100 border border-stone-200 p-0.5 md:p-1 rounded-lg md:rounded-xl">
             <button 
               onClick={() => setAppointmentsMode('calendar')} 
               className={`p-1.5 md:p-2 rounded-md transition-all ${appointmentsMode === 'calendar' ? 'bg-white text-primary shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
+              title="Vista de Calendário"
             >
               <CalendarDays size={16}/>
             </button>
             <button 
               onClick={() => setAppointmentsMode('list')} 
               className={`p-1.5 md:p-2 rounded-md transition-all ${appointmentsMode === 'list' ? 'bg-white text-primary shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
+              title="Vista de Lista"
             >
               <LayoutList size={16}/>
             </button>
@@ -110,16 +121,17 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
         </div>
       </div>
 
+      {/* Área de Conteúdo Principal */}
       <div className="flex-1 min-h-0">
         {appointmentsMode === 'calendar' ? (
           <AdminCalendar 
             appointments={appointments} 
             timeBlocks={timeBlocks} 
-            services={dbServices} // Passando os serviços aqui
+            services={dbServices}
             onEditAppointment={onEditAppointment} 
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto h-full pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto h-full pr-1 pb-10">
             {appointments.length === 0 ? (
               <div className="col-span-full bg-white border border-dashed border-stone-200 rounded-2xl py-10 text-center px-6">
                 <p className="text-stone-400 italic text-xs font-light">{COPY.admin.appointments.empty}</p>
@@ -129,26 +141,32 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
                 <div 
                   key={app.id} 
                   onClick={() => onEditAppointment(app)}
-                  className="bg-brand-footer/90 border border-white/5 p-4 rounded-2xl relative group shadow-lg hover:border-primary/30 transition-all cursor-pointer"
+                  className="bg-brand-card border border-stone-100 p-4 rounded-2xl relative group shadow-sm hover:border-primary/30 transition-all cursor-pointer"
                 >
                   <div className="flex justify-between items-start mb-2">
+                    {/* Badge do Serviço com a cor real */}
                     <span 
-                      className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-black/10"
-                      style={{ backgroundColor: app.serviceColor || '#f5f5f4', color: '#1a1714' }}
+                      className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-black/5 shadow-inner"
+                      style={{ 
+                        backgroundColor: app.serviceColor || '#f5f5f4',
+                        color: 'rgba(0,0,0,0.6)' // Texto suave para não chocar com a cor de fundo
+                      }}
                     >
                       {app.serviceName}
                     </span>
                     <button 
                       onClick={(e) => handleDeleteApp(e, app.id!)} 
-                      className="text-stone-500 hover:text-red-500 transition-colors p-1"
+                      className="text-stone-300 hover:text-red-500 transition-colors p-1"
                     >
                       <Trash2 size={14}/>
                     </button>
                   </div>
-                  <div className="text-white font-bold text-sm leading-tight mb-1">{app.clientName}</div>
+                  <div className="text-primary-dark font-bold text-sm leading-tight mb-1">{app.clientName}</div>
                   <div className="text-stone-400 text-[10px] font-medium flex items-center gap-1.5">
                     <Clock size={10} className="text-primary" />
-                    {app.startTime} - {app.endTime}
+                    <span className="uppercase tracking-tighter">
+                      {new Date(app.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} • {app.startTime} - {app.endTime}
+                    </span>
                   </div>
                 </div>
               ))

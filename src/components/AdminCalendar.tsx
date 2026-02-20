@@ -16,6 +16,7 @@ interface AdminCalendarProps {
 }
 
 const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, services, onEditAppointment }) => {
+  // Normaliza a data inicial para hoje às 00:00 local
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -28,6 +29,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
   const END_HOUR = 21;    
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
+  // Helper para formatar data local sem erros de fuso horário
   const formatDateLocal = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -35,6 +37,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     return `${year}-${month}-${day}`;
   };
 
+  // Gera array de 7 dias a partir da viewDate
   const getWeekDays = (startDate: Date) => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(startDate);
@@ -121,18 +124,18 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* ÁREA DA GRADE */}
+      {/* ÁREA DA GRADE COM CONTINUIDADE MOBILE */}
       <div className="flex-1 overflow-auto bg-[#F9FAFB] relative scrollbar-thin scrollbar-thumb-stone-200">
         <div className="inline-grid sm:grid grid-cols-[70px_repeat(7,75vw)] sm:grid-cols-[70px_repeat(7,1fr)] relative bg-white min-h-full">
           
-          {/* CABEÇALHO DOS DIAS */}
+          {/* CABEÇALHO DOS DIAS (Sticky) */}
           <div className="sticky top-0 z-30 col-span-full grid grid-cols-[70px_repeat(7,75vw)] sm:grid-cols-[70px_repeat(7,1fr)] bg-white border-b border-stone-100">
             <div className="bg-stone-50/50 border-r border-stone-100 sticky left-0 z-40"></div>
             {weekDays.map((day, i) => {
               const isToday = formatDateLocal(day) === formatDateLocal(new Date());
               const isFirstColumn = i === 0;
               return (
-                <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isFirstColumn ? 'bg-primary/[0.03]' : ''} ${isToday ? 'bg-primary/[0.03]' : ''}`}>
+                <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isFirstColumn || isToday ? 'bg-primary/[0.03]' : ''}`}>
                   <p className={`text-[10px] font-bold uppercase mb-1 ${isToday ? 'text-primary' : 'text-stone-400'}`}>
                     {day.toLocaleDateString('pt-PT', { weekday: 'short' })}
                   </p>
@@ -144,7 +147,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
             })}
           </div>
 
-          {/* HORAS LATERAIS */}
+          {/* HORAS LATERAIS (Sticky) */}
           <div className="bg-white border-r border-stone-100 sticky left-0 z-20 shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
             {hours.map(hour => (
               <div 
@@ -165,11 +168,12 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
             const isFirstColumn = colIdx === 0;
 
             return (
-              <div key={colIdx} className={`relative border-r border-stone-100 last:border-0 bg-white group ${isFirstColumn ? 'bg-primary/[0.02]' : ''}`}>
+              <div key={colIdx} className={`relative border-r border-stone-100 last:border-0 bg-white group ${isFirstColumn ? 'bg-primary/[0.01]' : ''}`}>
                 {hours.map(h => (
                   <div key={h} className="border-b border-stone-50" style={{ height: `${HOUR_HEIGHT}px` }} />
                 ))}
 
+                {/* BLOQUEIOS */}
                 {dayBlocks.map(block => {
                   const { top } = getTimeData(block.startTime);
                   const height = calculateHeight(block.startTime, block.endTime);
@@ -184,11 +188,12 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
                   );
                 })}
 
+                {/* AGENDAMENTOS COM COR REAL */}
                 {dayAppointments.map(app => {
                   const { top } = getTimeData(app.startTime);
                   const height = calculateHeight(app.startTime, app.endTime);
                   
-                  // CORREÇÃO: Usa apenas a cor guardada na base de dados
+                  // CORREÇÃO: Usa a cor guardada no agendamento ou fallback
                   const bgColor = app.serviceColor || '#f5f5f4';
 
                   return (
@@ -219,15 +224,15 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* LEGENDA DINÂMICA (Baseada nos serviços criados) */}
+      {/* LEGENDA DINÂMICA REAL */}
       <div className="p-3 bg-white border-t border-stone-100 flex gap-6 overflow-x-auto no-scrollbar">
         {services.length === 0 ? (
-           <span className="text-[10px] text-stone-400 italic">Crie serviços para ver a legenda.</span>
+          <span className="text-[10px] text-stone-400 italic">Configure serviços para ver a legenda.</span>
         ) : (
           services.map((s) => (
             <div key={s.id} className="flex items-center gap-2 shrink-0">
               <div 
-                className="w-3 h-3 rounded border border-black/5" 
+                className="w-3 h-3 rounded border border-black/5 shadow-sm" 
                 style={{ backgroundColor: s.color || '#f5f5f4' }}
               ></div>
               <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">{s.name}</span>
