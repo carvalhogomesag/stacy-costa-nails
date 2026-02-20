@@ -11,12 +11,11 @@ import { THEME } from '../theme';
 interface AdminCalendarProps {
   appointments: Appointment[];
   timeBlocks: TimeBlock[];
-  services: Service[]; // Adicionado para gerar a legenda dinâmica
+  services: Service[];
   onEditAppointment: (appt: Appointment) => void;
 }
 
 const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, services, onEditAppointment }) => {
-  // Normaliza a data inicial para hoje às 00:00 local
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -29,7 +28,6 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
   const END_HOUR = 21;    
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
-  // Helper para formatar data local sem erros de fuso horário
   const formatDateLocal = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -37,7 +35,6 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     return `${year}-${month}-${day}`;
   };
 
-  // Gera array de 7 dias a partir da viewDate
   const getWeekDays = (startDate: Date) => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(startDate);
@@ -124,11 +121,11 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* ÁREA DA GRADE COM CONTINUIDADE MOBILE */}
+      {/* ÁREA DA GRADE */}
       <div className="flex-1 overflow-auto bg-[#F9FAFB] relative scrollbar-thin scrollbar-thumb-stone-200">
         <div className="inline-grid sm:grid grid-cols-[70px_repeat(7,75vw)] sm:grid-cols-[70px_repeat(7,1fr)] relative bg-white min-h-full">
           
-          {/* CABEÇALHO DOS DIAS (Sticky) */}
+          {/* CABEÇALHO DOS DIAS */}
           <div className="sticky top-0 z-30 col-span-full grid grid-cols-[70px_repeat(7,75vw)] sm:grid-cols-[70px_repeat(7,1fr)] bg-white border-b border-stone-100">
             <div className="bg-stone-50/50 border-r border-stone-100 sticky left-0 z-40"></div>
             {weekDays.map((day, i) => {
@@ -147,15 +144,18 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
             })}
           </div>
 
-          {/* HORAS LATERAIS (Sticky) */}
+          {/* HORAS LATERAIS CORRIGIDAS (ALINHAMENTO PELO TOPO) */}
           <div className="bg-white border-r border-stone-100 sticky left-0 z-20 shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
             {hours.map(hour => (
               <div 
                 key={hour} 
-                className="text-right pr-3 text-[10px] font-medium text-stone-400 border-b border-stone-50" 
-                style={{ height: `${HOUR_HEIGHT}px`, lineHeight: `${HOUR_HEIGHT}px` }}
+                className="relative border-b border-stone-50 group" 
+                style={{ height: `${HOUR_HEIGHT}px` }}
               >
-                {hour.toString().padStart(2, '0')}:00
+                {/* O Span agora está posicionado no topo exato da linha divisória */}
+                <span className="absolute top-0 right-3 -translate-y-1/2 text-[10px] font-bold text-stone-400 bg-white px-1 z-10">
+                  {hour.toString().padStart(2, '0')}:00
+                </span>
               </div>
             ))}
           </div>
@@ -188,12 +188,10 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
                   );
                 })}
 
-                {/* AGENDAMENTOS COM COR REAL */}
+                {/* AGENDAMENTOS (ALINHADOS PELO TOPO) */}
                 {dayAppointments.map(app => {
                   const { top } = getTimeData(app.startTime);
                   const height = calculateHeight(app.startTime, app.endTime);
-                  
-                  // CORREÇÃO: Usa a cor guardada no agendamento ou fallback
                   const bgColor = app.serviceColor || '#f5f5f4';
 
                   return (
@@ -202,8 +200,9 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditAppointment(app); }}
                       className="absolute left-1.5 right-1.5 z-40 rounded-xl border-l-[5px] p-3 shadow-sm transition-all cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-95 group overflow-hidden"
                       style={{ 
-                        top: `${top + 3}px`, 
-                        height: `${height - 6}px`,
+                        // O 'top' matemático agora coincide com a posição visual da hora na sidebar
+                        top: `${top + 2}px`, 
+                        height: `${height - 4}px`,
                         backgroundColor: bgColor,
                         borderLeftColor: 'rgba(0,0,0,0.1)'
                       }}
@@ -224,7 +223,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* LEGENDA DINÂMICA REAL */}
+      {/* LEGENDA DINÂMICA */}
       <div className="p-3 bg-white border-t border-stone-100 flex gap-6 overflow-x-auto no-scrollbar">
         {services.length === 0 ? (
           <span className="text-[10px] text-stone-400 italic">Configure serviços para ver a legenda.</span>
