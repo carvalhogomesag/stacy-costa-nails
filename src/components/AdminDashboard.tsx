@@ -57,41 +57,41 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
   };
 
   return (
-    <div className="fixed inset-0 z-[120] bg-stone-950 flex flex-col text-left overflow-hidden font-sans">
+    <div className="fixed inset-0 z-[120] bg-[#f9fafb] flex flex-col text-left overflow-hidden font-sans">
       
-      {/* HEADER DINÂMICO E RESPONSIVO */}
-      <header className="bg-stone-900 border-b border-[#b5967a]/20 p-4 md:p-6 z-30 shadow-2xl">
+      {/* HEADER PREMIUM LIGHT */}
+      <header className="bg-white border-b border-stone-200 p-4 md:p-5 z-30 shadow-sm">
         <div className="container mx-auto flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-center">
           
-          {/* Logo e Nome - Mais compactos no Mobile */}
+          {/* Logo e Nome - Tons Escuros sobre Fundo Branco */}
           <div className="flex items-center justify-between lg:justify-start gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 md:w-12 md:h-12 bg-[#b5967a] rounded-xl flex items-center justify-center text-white shadow-lg shadow-[#b5967a]/20">
                 <Heart size={20} className="md:w-6 md:h-6" fill="currentColor" />
               </div>
               <div>
-                <h1 className="text-base md:text-xl font-serif font-bold text-white uppercase tracking-tight truncate max-w-[150px] md:max-w-none">
+                <h1 className="text-base md:text-xl font-serif font-bold text-stone-800 uppercase tracking-tight truncate max-w-[150px] md:max-w-none">
                   {BUSINESS_INFO.name}
                 </h1>
-                <p className="text-[#d4bca9] text-[9px] md:text-[10px] font-black uppercase tracking-widest leading-none mt-0.5">Gestão Premium</p>
+                <p className="text-[#b5967a] text-[9px] md:text-[10px] font-black uppercase tracking-widest leading-none mt-0.5 italic">Painel de Gestão</p>
               </div>
             </div>
 
-            {/* Logout Mobile (só aparece no topo se estiver em ecrã pequeno) */}
+            {/* Logout Mobile */}
             <div className="flex items-center gap-3 lg:hidden">
               {isInstallable && (
                 <button onClick={onInstallClick} className="p-2.5 bg-[#b5967a]/10 text-[#b5967a] rounded-xl border border-[#b5967a]/20">
                   <Download size={18} />
                 </button>
               )}
-              <button onClick={handleSignOut} className="p-2.5 text-stone-500 hover:text-red-500 transition-colors">
+              <button onClick={handleSignOut} className="p-2.5 text-stone-400 hover:text-red-500 transition-colors">
                 <LogOut size={20} />
               </button>
             </div>
           </div>
 
-          {/* Navegação por Abas - Scroll Horizontal no Mobile */}
-          <nav className="flex bg-stone-800/40 p-1 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar scroll-smooth">
+          {/* Navegação por Abas - Estilo Pilulado Light */}
+          <nav className="flex bg-stone-100 p-1 rounded-2xl border border-stone-200 overflow-x-auto no-scrollbar scroll-smooth">
             <div className="flex flex-nowrap gap-1">
               <TabButton 
                 active={activeTab === 'appointments'} 
@@ -125,20 +125,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
             {isInstallable && (
               <button 
                 onClick={onInstallClick} 
-                className="flex items-center gap-2 bg-[#b5967a]/20 text-[#b5967a] px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#b5967a] hover:text-white transition-all border border-[#b5967a]/30"
+                className="flex items-center gap-2 bg-[#b5967a]/10 text-[#b5967a] px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#b5967a] hover:text-white transition-all border border-[#b5967a]/20"
               >
-                <Download size={16} /> Instalar App
+                <Download size={15} /> Instalar App
               </button>
             )}
-            <button onClick={handleSignOut} className="text-stone-500 hover:text-red-500 transition-colors flex items-center gap-2 font-bold text-sm">
-              <LogOut size={18} /> <span>Sair</span>
+            <button onClick={handleSignOut} className="text-stone-400 hover:text-red-600 transition-colors flex items-center gap-2 font-bold text-sm">
+              <LogOut size={18} /> <span className="uppercase tracking-widest text-[11px]">Sair</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* CONTEÚDO DINÂMICO - Ajuste de padding para Mobile */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-stone-950 pb-20 md:pb-8">
+      {/* CONTEÚDO DINÂMICO - Fundo Claro */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#f9fafb] pb-24 md:pb-8">
         <div className="container mx-auto max-w-6xl h-full">
           {activeTab === 'appointments' && (
             <DashboardAppointments 
@@ -161,13 +161,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
         </div>
       </main>
 
-      {/* Footer minimalista */}
-      <footer className="hidden md:flex p-4 text-center text-stone-800 text-[10px] uppercase font-bold tracking-[0.4em] bg-stone-950 border-t border-white/5 justify-center items-center gap-2">
-        <span>Sistema de Gestão Stacy Costa • Allan Dev v3.6</span>
-        {isInstallable && <span className="text-[#b5967a]">• PWA Ready</span>}
+      {/* Footer minimalista Light */}
+      <footer className="hidden md:flex p-3 text-center text-stone-400 text-[9px] uppercase font-bold tracking-[0.4em] bg-white border-t border-stone-200 justify-center items-center gap-2">
+        <span>Sistema de Gestão Stacy Costa • Allan Dev v3.7</span>
+        {isInstallable && <span className="text-[#b5967a]">• PWA Enabled</span>}
       </footer>
 
-      {/* MODAL ÚNICO GERENCIADO PELO PAI */}
+      {/* MODAL MANTIDO PELO PAI */}
       <AdminBookingModal 
         isOpen={isAdminBookingOpen} 
         onClose={() => setIsAdminBookingOpen(false)} 
@@ -178,14 +178,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
   );
 };
 
-// Componente auxiliar TabButton com suporte a Touch Targets menores
+// Componente auxiliar TabButton Light Mode
 const TabButton = ({ active, onClick, icon, label }: any) => (
   <button 
     onClick={onClick} 
-    className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
+    className={`flex items-center gap-2 px-4 py-2 md:px-5 md:py-2 rounded-xl text-[10px] md:text-xs font-black transition-all shrink-0 whitespace-nowrap tracking-wider ${
       active 
-      ? 'bg-[#b5967a] text-white shadow-lg' 
-      : 'text-stone-400 hover:text-stone-200'
+      ? 'bg-[#b5967a] text-white shadow-md' 
+      : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'
     }`}
   >
     {icon} {label}
