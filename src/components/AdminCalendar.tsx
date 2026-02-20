@@ -6,7 +6,8 @@ import {
   Calendar as CalendarIcon,
   Clock,
   User,
-  Heart
+  Heart,
+  Settings // Ícone que estava a faltar na importação
 } from 'lucide-react';
 import { Appointment, TimeBlock } from '../types';
 
@@ -25,7 +26,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
   const END_HOUR = 21;    
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
-  // Mapeamento de cores para os cards (Estilo Fresha)
+  // Mapeamento de cores para os cards (Estilo Fresha - Tons Pastéis)
   const getServiceColor = (serviceName: string) => {
     const name = serviceName.toLowerCase();
     if (name.includes('gel')) return 'bg-rose-100 border-rose-200 text-rose-700';
@@ -114,7 +115,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
       <div className="flex-1 overflow-auto bg-[#F9FAFB] relative scrollbar-thin scrollbar-thumb-stone-200">
         <div className="min-w-[800px] md:min-w-[1100px] relative bg-white">
           
-          {/* CABEÇALHO DOS DIAS - STICKY */}
+          {/* CABEÇALHO DOS DIAS - STICKY TOP */}
           <div className="sticky top-0 z-30 grid grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr] bg-white border-b border-stone-100">
             <div className="bg-stone-50/50 border-r border-stone-100"></div>
             {weekDays.map((day, i) => {
@@ -135,7 +136,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
           <div className="relative grid grid-cols-[70px_1fr_1fr_1fr_1fr_1fr_1fr]">
             
             {/* HORAS LATERAIS - STICKY LEFT */}
-            <div className="bg-white border-r border-stone-100 sticky left-0 z-20">
+            <div className="bg-white border-r border-stone-100 sticky left-0 z-20 shadow-[5px_0_15px_rgba(0,0,0,0.02)]">
               {hours.map(hour => (
                 <div 
                   key={hour} 
@@ -154,8 +155,8 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
               const dayBlocks = timeBlocks.filter(b => isBlockActiveOnDay(b, day));
 
               return (
-                <div key={colIdx} className="relative border-r border-stone-100 last:border-0 bg-white">
-                  {/* Linhas horizontais leves */}
+                <div key={colIdx} className="relative border-r border-stone-100 last:border-0 bg-white group">
+                  {/* Linhas horizontais de fundo */}
                   {hours.map(h => (
                     <div key={h} className="border-b border-stone-50" style={{ height: `${HOUR_HEIGHT}px` }} />
                   ))}
