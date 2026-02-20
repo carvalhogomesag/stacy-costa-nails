@@ -5,17 +5,17 @@ import {
   Lock, 
   Settings
 } from 'lucide-react';
-import { Appointment, TimeBlock } from '../types';
+import { Appointment, TimeBlock, Service } from '../types';
 import { THEME } from '../theme';
 
 interface AdminCalendarProps {
   appointments: Appointment[];
   timeBlocks: TimeBlock[];
+  services: Service[]; // Adicionado para gerar a legenda dinâmica
   onEditAppointment: (appt: Appointment) => void;
 }
 
-const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, onEditAppointment }) => {
-  // Inicializa sempre com a data de hoje sem horas (normalizada)
+const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks, services, onEditAppointment }) => {
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -28,20 +28,11 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
   const END_HOUR = 21;    
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
-  // Helper para comparar datas sem erro de fuso horário (YYYY-MM-DD)
   const formatDateLocal = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  };
-
-  const getServiceColor = (serviceName: string) => {
-    const name = serviceName.toLowerCase();
-    if (name.includes('gel') || name.includes('mani')) return 'bg-rose-100 border-rose-200 text-rose-700';
-    if (name.includes('alonga') || name.includes('exten')) return 'bg-amber-100 border-amber-200 text-amber-700';
-    if (name.includes('pedi')) return 'bg-emerald-100 border-emerald-200 text-emerald-700';
-    return 'bg-stone-100 border-stone-200 text-stone-700';
   };
 
   const getWeekDays = (startDate: Date) => {
@@ -85,13 +76,10 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
     blockDate.setHours(0,0,0,0);
     const target = new Date(targetDate);
     target.setHours(0,0,0,0);
-    
     if (target.getTime() === blockDate.getTime()) return true;
     if (!block.isRecurring || target < blockDate) return false;
-    
     const diffDays = Math.round((target.getTime() - blockDate.getTime()) / (1000 * 60 * 60 * 24));
     const repeats = block.repeatCount || 0;
-    
     switch (block.recurringType) {
       case 'daily': return diffDays <= repeats;
       case 'weekly': return diffDays % 7 === 0 && (diffDays / 7) <= repeats;
@@ -141,7 +129,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
           <div className="sticky top-0 z-30 col-span-full grid grid-cols-[70px_repeat(7,75vw)] sm:grid-cols-[70px_repeat(7,1fr)] bg-white border-b border-stone-100">
             <div className="bg-stone-50/50 border-r border-stone-100 sticky left-0 z-40"></div>
             {weekDays.map((day, i) => {
-              const isToday = day.toDateString() === new Date().toDateString();
+              const isToday = formatDateLocal(day) === formatDateLocal(new Date());
               const isFirstColumn = i === 0;
               return (
                 <div key={i} className={`py-4 text-center border-r border-stone-100 last:border-0 ${isFirstColumn ? 'bg-primary/[0.03]' : ''} ${isToday ? 'bg-primary/[0.03]' : ''}`}>
@@ -171,7 +159,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
 
           {/* COLUNAS DOS DIAS */}
           {weekDays.map((day, colIdx) => {
-            const dateStr = formatDateLocal(day); // Usando o helper local seguro
+            const dateStr = formatDateLocal(day);
             const dayAppointments = appointments.filter(a => a.date === dateStr);
             const dayBlocks = timeBlocks.filter(b => isBlockActiveOnDay(b, day));
             const isFirstColumn = colIdx === 0;
@@ -200,7 +188,7 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
                   const { top } = getTimeData(app.startTime);
                   const height = calculateHeight(app.startTime, app.endTime);
                   
-                  // Usa a cor dinâmica do serviço ou fallback
+                  // CORREÇÃO: Usa apenas a cor guardada na base de dados
                   const bgColor = app.serviceColor || '#f5f5f4';
 
                   return (
@@ -231,18 +219,21 @@ const AdminCalendar: React.FC<AdminCalendarProps> = ({ appointments, timeBlocks,
         </div>
       </div>
 
-      {/* LEGENDA */}
+      {/* LEGENDA DINÂMICA (Baseada nos serviços criados) */}
       <div className="p-3 bg-white border-t border-stone-100 flex gap-6 overflow-x-auto no-scrollbar">
-        {[
-          { color: 'bg-rose-100 border-rose-200', label: 'Manicure / Gel' },
-          { color: 'bg-amber-100 border-amber-200', label: 'Alongamento' },
-          { color: 'bg-emerald-100 border-emerald-200', label: 'Pedicure' },
-        ].map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2 shrink-0">
-            <div className={`w-3 h-3 rounded ${item.color}`}></div>
-            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">{item.label}</span>
-          </div>
-        ))}
+        {services.length === 0 ? (
+           <span className="text-[10px] text-stone-400 italic">Crie serviços para ver a legenda.</span>
+        ) : (
+          services.map((s) => (
+            <div key={s.id} className="flex items-center gap-2 shrink-0">
+              <div 
+                className="w-3 h-3 rounded border border-black/5" 
+                style={{ backgroundColor: s.color || '#f5f5f4' }}
+              ></div>
+              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tighter">{s.name}</span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

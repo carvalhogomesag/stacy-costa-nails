@@ -5,7 +5,7 @@ import {
   Calendar as CalendarIcon, Clock, Loader2, 
   Plus, LayoutList, CalendarDays, Trash2 
 } from 'lucide-react';
-import { Appointment, TimeBlock } from '../../types';
+import { Appointment, TimeBlock, Service } from '../../types';
 import AdminCalendar from '../AdminCalendar';
 import { CLIENT_ID } from '../../constants';
 import { COPY } from '../../copy';
@@ -22,15 +22,18 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
   const [appointmentsMode, setAppointmentsMode] = useState<'calendar' | 'list'>('calendar');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
+  const [dbServices, setDbServices] = useState<Service[]>([]); // Estado para os serviços
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const todayStr = today.toISOString().split('T')[0];
     
-    // 1. Escutar Agendamentos (Multi-tenant)
+    // 1. Escutar Agendamentos
     const qApp = query(
       collection(db, "businesses", CLIENT_ID, "appointments"), 
-      where("date", ">=", today), 
+      where("date", ">=", todayStr), 
       orderBy("date", "asc")
     );
     const unsubApp = onSnapshot(qApp, (snap) => {
@@ -43,7 +46,12 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
       setTimeBlocks(snap.docs.map(d => ({ id: d.id, ...d.data() } as TimeBlock)));
     });
 
-    return () => { unsubApp(); unsubBlocks(); };
+    // 3. Escutar Serviços (para a legenda do calendário)
+    const unsubServices = onSnapshot(collection(db, "businesses", CLIENT_ID, "services"), (snap) => {
+      setDbServices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Service)));
+    });
+
+    return () => { unsubApp(); unsubBlocks(); unsubServices(); };
   }, []);
 
   const handleDeleteApp = async (e: React.MouseEvent, id: string) => {
@@ -69,7 +77,6 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
   return (
     <div className="animate-in fade-in duration-500 h-full flex flex-col overflow-hidden">
       
-      {/* Cabeçalho da Aba - COMPACTAÇÃO EXTREMA */}
       <div className="flex items-center justify-between mb-2 md:mb-5 gap-2 px-1">
         <div className="flex items-center gap-2">
           <CalendarIcon className="text-primary w-4 h-4 md:w-6 md:h-6"/> 
@@ -79,7 +86,6 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Botão Nova Marcação */}
           <button 
             onClick={onNewBooking}
             className="flex items-center justify-center gap-1.5 bg-primary hover:bg-primary-hover text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all shadow-lg active:scale-95 uppercase tracking-wider"
@@ -87,7 +93,6 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
             <Plus size={14} strokeWidth={3} /> <span className="hidden xs:inline">{COPY.admin.appointments.newBtn}</span>
           </button>
 
-          {/* Selector de Vista */}
           <div className="flex bg-stone-100 border border-stone-200 p-0.5 md:p-1 rounded-lg md:rounded-xl">
             <button 
               onClick={() => setAppointmentsMode('calendar')} 
@@ -105,12 +110,12 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
         </div>
       </div>
 
-      {/* Área de Conteúdo */}
       <div className="flex-1 min-h-0">
         {appointmentsMode === 'calendar' ? (
           <AdminCalendar 
             appointments={appointments} 
             timeBlocks={timeBlocks} 
+            services={dbServices} // Passando os serviços aqui
             onEditAppointment={onEditAppointment} 
           />
         ) : (
@@ -127,7 +132,10 @@ const DashboardAppointments: React.FC<DashboardAppointmentsProps> = ({
                   className="bg-brand-footer/90 border border-white/5 p-4 rounded-2xl relative group shadow-lg hover:border-primary/30 transition-all cursor-pointer"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className="bg-primary/10 text-primary-light px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-primary/20">
+                    <span 
+                      className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-black/10"
+                      style={{ backgroundColor: app.serviceColor || '#f5f5f4', color: '#1a1714' }}
+                    >
                       {app.serviceName}
                     </span>
                     <button 
