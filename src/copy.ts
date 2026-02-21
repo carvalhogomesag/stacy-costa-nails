@@ -147,7 +147,6 @@ export const COPY = {
       btnClose: "Fechar Caixa",
       btnNewEntry: "Novo Lançamento",
 
-      // FASE 3: Sub-navegação do Caixa
       tabs: {
         current: "Sessão Atual",
         history: "Histórico & Relatórios"
@@ -201,11 +200,12 @@ export const COPY = {
         deleteConfirm: "Eliminar este lançamento financeiro?"
       },
 
-      // FASE 3: Histórico e Exportação
+      // Histórico e Exportação
       history: {
         title: "Histórico de Sessões",
         filterLabel: "Filtrar Período",
         exportCsv: "Exportar para CSV (Excel)",
+        exportPdf: "Gerar Relatório PDF",
         empty: "Nenhum histórico encontrado para este período.",
         ranges: {
           last7: "Últimos 7 dias",
@@ -213,6 +213,17 @@ export const COPY = {
           thisMonth: "Este mês",
           all: "Todo o histórico"
         }
+      },
+
+      // Labels específicas para a diagramação do PDF
+      pdfLabels: {
+        title: "Relatório de Fluxo de Caixa",
+        generatedAt: "Gerado em:",
+        period: "Período:",
+        summary: "Resumo Financeiro",
+        totalIn: "Total de Entradas:",
+        totalOut: "Total de Saídas:",
+        net: "Saldo do Período:"
       },
 
       methods: {

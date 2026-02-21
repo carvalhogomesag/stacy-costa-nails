@@ -8,14 +8,14 @@ import {
   Download,
   Calendar,
   ChevronRight,
-  FileText,
-  TrendingUp
+  FileText
 } from 'lucide-react';
 import { useCashSession } from '../../../hooks/useCashSession';
 import { COPY } from '../../../copy';
 import { formatCurrency, calculateCashSummary } from '../../../utils/cashCalculations';
 import { getClosedCashSessions, getEntriesForExport } from '../../../services/cashService';
 import { exportEntriesToCSV } from '../../../utils/exportUtils';
+import { exportEntriesToPDF } from '../../../utils/pdfUtils';
 import { CashSession } from '../../../types';
 
 // Sub-componentes
@@ -28,20 +28,19 @@ import CashEntriesList from './CashEntriesList';
 const DashboardCash: React.FC = () => {
   const { currentSession, entries, summary, loading: sessionLoading } = useCashSession();
   
-  // --- ESTADOS DE NAVEGAÇÃO ---
+  // NAVEGAÇÃO INTERNA
   const [activeSubTab, setActiveSubTab] = useState<'current' | 'history'>('current');
 
-  // --- ESTADOS DE MODAIS ---
+  // CONTROLO DE MODAIS
   const [isOpenModalOpen, setIsOpenModalOpen] = useState(false);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
 
-  // --- ESTADOS DE HISTÓRICO (FASE 3) ---
+  // HISTÓRICO
   const [closedSessions, setClosedSessions] = useState<CashSession[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  // Carregar histórico quando a aba mudar
   useEffect(() => {
     if (activeSubTab === 'history') {
       loadHistory();
@@ -51,7 +50,7 @@ const DashboardCash: React.FC = () => {
   const loadHistory = async () => {
     setHistoryLoading(true);
     try {
-      const data = await getClosedCashSessions(30); // Últimos 30 dias
+      const data = await getClosedCashSessions(30); 
       setClosedSessions(data);
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
@@ -60,7 +59,8 @@ const DashboardCash: React.FC = () => {
     }
   };
 
-  const handleExportAll = async () => {
+  // EXPORTAÇÃO CSV
+  const handleExportCSV = async () => {
     setExporting(true);
     try {
       const sessionIds = closedSessions.map(s => s.id!);
@@ -69,7 +69,29 @@ const DashboardCash: React.FC = () => {
       const entriesToExport = await getEntriesForExport(sessionIds);
       exportEntriesToCSV(entriesToExport);
     } catch (error) {
-      alert("Erro ao exportar dados.");
+      alert("Erro ao exportar CSV.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // EXPORTAÇÃO PDF
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const sessionIds = closedSessions.map(s => s.id!);
+      if (currentSession?.id) sessionIds.push(currentSession.id);
+      
+      const entriesToExport = await getEntriesForExport(sessionIds);
+      
+      // Cálculo do resumo consolidado para o cabeçalho do PDF
+      const firstBalance = closedSessions[closedSessions.length - 1]?.initialBalance || currentSession?.initialBalance || 0;
+      const exportSummary = calculateCashSummary(firstBalance, entriesToExport);
+
+      exportEntriesToPDF(entriesToExport, exportSummary, "Relatório Geral (30 dias)");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao gerar PDF.");
     } finally {
       setExporting(false);
     }
@@ -89,14 +111,12 @@ const DashboardCash: React.FC = () => {
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-20">
       
-      {/* NAVEGAÇÃO INTERNA DO CAIXA (Sessão vs Histórico) */}
+      {/* SELETOR DE ABA (Sessão vs Histórico) */}
       <div className="flex bg-stone-100 p-1 rounded-2xl w-full sm:w-max">
         <button 
           onClick={() => setActiveSubTab('current')}
           className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${
-            activeSubTab === 'current' 
-            ? 'bg-white text-primary shadow-sm' 
-            : 'text-stone-400 hover:text-stone-600'
+            activeSubTab === 'current' ? 'bg-white text-primary shadow-sm' : 'text-stone-400'
           }`}
         >
           {COPY.admin.cash.tabs.current}
@@ -104,9 +124,7 @@ const DashboardCash: React.FC = () => {
         <button 
           onClick={() => setActiveSubTab('history')}
           className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${
-            activeSubTab === 'history' 
-            ? 'bg-white text-primary shadow-sm' 
-            : 'text-stone-400 hover:text-stone-600'
+            activeSubTab === 'history' ? 'bg-white text-primary shadow-sm' : 'text-stone-400'
           }`}
         >
           {COPY.admin.cash.tabs.history}
@@ -116,9 +134,9 @@ const DashboardCash: React.FC = () => {
       {activeSubTab === 'current' ? (
         <>
           {!currentSession ? (
-            /* ESTADO: CAIXA FECHADO */
+            /* CAIXA FECHADO */
             <div className="animate-in fade-in zoom-in-95 duration-500 flex flex-col items-center justify-center py-12 px-6">
-              <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6 shadow-inner">
+              <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6">
                 <Wallet size={48} />
               </div>
               <h3 className="text-2xl font-serif font-bold text-primary-dark mb-2 text-center">
@@ -129,32 +147,30 @@ const DashboardCash: React.FC = () => {
               </p>
               <button 
                 onClick={() => setIsOpenModalOpen(true)}
-                className="bg-primary hover:bg-primary-hover text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-primary/20 transition-all active:scale-95 uppercase tracking-widest text-sm flex items-center gap-3"
+                className="bg-primary hover:bg-primary-hover text-white px-10 py-4 rounded-2xl font-black shadow-xl transition-all active:scale-95 uppercase tracking-widest text-sm flex items-center gap-3"
               >
                 <Plus size={20} strokeWidth={3} />
                 {COPY.admin.cash.btnOpen}
               </button>
             </div>
           ) : (
-            /* ESTADO: CAIXA ABERTO */
+            /* CAIXA ABERTO */
             <div className="space-y-6 animate-in fade-in duration-500">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <h3 className="text-primary-dark font-bold text-xl uppercase tracking-tight">
-                      {COPY.admin.cash.title}
-                    </h3>
+                    <h3 className="text-primary-dark font-bold text-xl uppercase tracking-tight">{COPY.admin.cash.title}</h3>
                   </div>
                   <p className="text-stone-500 text-xs font-medium uppercase tracking-[0.2em]">
                     {COPY.admin.cash.subtitle} • {new Date(currentSession.openingDate).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setIsEntryModalOpen(true)} className="flex-1 md:flex-none bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-primary-hover transition-all flex items-center justify-center gap-2 active:scale-95">
+                  <button onClick={() => setIsEntryModalOpen(true)} className="flex-1 md:flex-none bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-primary-hover transition-all flex items-center gap-2 active:scale-95">
                     <Plus size={18} /> {COPY.admin.cash.btnNewEntry}
                   </button>
-                  <button onClick={() => setIsCloseModalOpen(true)} className="flex-1 md:flex-none bg-white border border-stone-200 text-stone-600 px-6 py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all flex items-center justify-center gap-2 active:scale-95">
+                  <button onClick={() => setIsCloseModalOpen(true)} className="flex-1 md:flex-none bg-white border border-stone-200 text-stone-600 px-6 py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-red-50 hover:text-red-600 transition-all flex items-center gap-2 active:scale-95">
                     <Lock size={18} /> {COPY.admin.cash.btnClose}
                   </button>
                 </div>
@@ -178,29 +194,38 @@ const DashboardCash: React.FC = () => {
           )}
         </>
       ) : (
-        /* ABA DE HISTÓRICO (FASE 3) */
+        /* ABA HISTÓRICO */
         <div className="space-y-6 animate-in fade-in duration-500">
            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h3 className="text-primary-dark font-bold text-xl uppercase tracking-tight">{COPY.admin.cash.history.title}</h3>
-                <p className="text-stone-500 text-[10px] font-bold uppercase tracking-widest italic">Últimos 30 dias de operação</p>
+                <p className="text-stone-500 text-[10px] font-bold uppercase tracking-widest italic">Análise de performance contabilidade</p>
               </div>
-              <button 
-                onClick={handleExportAll}
-                disabled={exporting || closedSessions.length === 0}
-                className="bg-primary/10 text-primary border border-primary/20 px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary hover:text-white transition-all disabled:opacity-50"
-              >
-                {exporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-                {COPY.admin.cash.history.exportCsv}
-              </button>
+              
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={handleExportCSV}
+                  disabled={exporting || (closedSessions.length === 0 && !currentSession)}
+                  className="bg-stone-100 text-stone-600 border border-stone-200 px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-stone-200 transition-all disabled:opacity-50 uppercase"
+                >
+                  <Download size={16} /> CSV
+                </button>
+                <button 
+                  onClick={handleExportPDF}
+                  disabled={exporting || (closedSessions.length === 0 && !currentSession)}
+                  className="bg-primary/10 text-primary border border-primary/20 px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-primary hover:text-white transition-all disabled:opacity-50 uppercase"
+                >
+                  {exporting ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />}
+                  {COPY.admin.cash.history.exportPdf}
+                </button>
+              </div>
            </div>
 
            {historyLoading ? (
              <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-primary" size={32} /></div>
            ) : closedSessions.length === 0 ? (
-             <div className="bg-brand-card border border-dashed border-stone-200 rounded-[2rem] p-20 text-center">
-                <FileText className="mx-auto text-stone-200 mb-4" size={48} />
-                <p className="text-stone-400 italic">{COPY.admin.cash.history.empty}</p>
+             <div className="bg-brand-card border border-dashed border-stone-200 rounded-[2rem] p-20 text-center text-stone-400 italic">
+                {COPY.admin.cash.history.empty}
              </div>
            ) : (
              <div className="grid grid-cols-1 gap-3">
@@ -219,10 +244,9 @@ const DashboardCash: React.FC = () => {
                           </p>
                        </div>
                     </div>
-                    
                     <div className="flex items-center gap-6">
                        <div className="text-right">
-                          <span className="block text-[8px] font-black text-stone-400 uppercase tracking-widest mb-0.5">Divergência</span>
+                          <span className="block text-[8px] font-black text-stone-400 uppercase tracking-widest mb-0.5">{COPY.admin.cash.summary.diff}</span>
                           <span className={`text-xs font-bold ${session.divergenceAmount === 0 ? 'text-green-500' : 'text-red-500'}`}>
                             {session.divergenceAmount && session.divergenceAmount > 0 ? '+' : ''}{formatCurrency(session.divergenceAmount || 0)}
                           </span>
@@ -236,7 +260,7 @@ const DashboardCash: React.FC = () => {
         </div>
       )}
 
-      {/* MODAIS */}
+      {/* MODAIS MANTIDOS SEM SUPRESSÃO */}
       <OpenCashModal isOpen={isOpenModalOpen} onClose={() => setIsOpenModalOpen(false)} />
       {currentSession && (
         <>
