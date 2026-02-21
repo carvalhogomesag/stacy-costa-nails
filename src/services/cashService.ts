@@ -127,7 +127,6 @@ export const getCashEntriesBySession = async (sessionId: string): Promise<CashEn
 
 /**
  * Obtém sessões fechadas num intervalo de dias
- * @param days Número de dias para olhar para trás (ex: 7, 30)
  */
 export const getClosedCashSessions = async (days: number = 30): Promise<CashSession[]> => {
   const minDate = new Date();
@@ -146,26 +145,34 @@ export const getClosedCashSessions = async (days: number = 30): Promise<CashSess
 };
 
 /**
- * Obtém movimentos consolidados de várias sessões (Para Exportação CSV)
- * @param sessionIds Lista de IDs de sessões para extrair movimentos
+ * CORREÇÃO FASE 3: Obtém movimentos consolidados usando CHUNKS (Lotes)
+ * Esta função evita o erro de limite de 30 itens do Firestore e otimiza a performance.
  */
 export const getEntriesForExport = async (sessionIds: string[]): Promise<CashEntry[]> => {
   if (sessionIds.length === 0) return [];
 
-  // O Firestore tem um limite de 10-30 itens no operador 'in'
-  // Para exportações massivas, fazemos o fetch por businessId e filtramos via código
-  // ou fazemos queries em lote (chunks). Aqui faremos por businessId para simplicidade de MVP.
-  const q = query(
-    entriesRef,
-    where("businessId", "==", CLIENT_ID),
-    orderBy("createdAt", "desc")
-  );
+  // Firestore limita operador 'in' a 30 itens. Vamos dividir em lotes.
+  const chunks = [];
+  for (let i = 0; i < sessionIds.length; i += 30) {
+    chunks.push(sessionIds.slice(i, i + 30));
+  }
 
-  const querySnapshot = await getDocs(q);
-  const allEntries = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CashEntry));
-  
-  // Filtramos apenas as que pertencem às sessões selecionadas
-  return allEntries.filter(entry => sessionIds.includes(entry.sessionId));
+  let allEntries: CashEntry[] = [];
+
+  // Executar consultas por cada lote
+  for (const chunk of chunks) {
+    const q = query(
+      entriesRef,
+      where("sessionId", "in", chunk),
+      orderBy("createdAt", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const chunkEntries = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CashEntry));
+    allEntries = [...allEntries, ...chunkEntries];
+  }
+
+  return allEntries;
 };
 
 /**
