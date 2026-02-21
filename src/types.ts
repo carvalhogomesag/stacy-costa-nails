@@ -110,6 +110,15 @@ export enum SessionStatus {
   Reconciled = 'RECONCILED',
 }
 
+// Interface para o rasto de auditoria de cada movimento
+export interface EntryChangeLog {
+  timestamp: any;
+  previousAmount: number;
+  newAmount: number;
+  reason: string;
+  updatedBy: string;
+}
+
 export interface CashEntry {
   id?: string;
   businessId: string;
@@ -122,24 +131,30 @@ export interface CashEntry {
   relatedAppointmentId?: string;
   status: 'CONFIRMED' | 'CANCELLED';
   notes?: string;
-  createdAt: any; // Firebase Timestamp
-  createdBy: string; // userId
+  createdAt: any; 
+  createdBy: string; 
   updatedAt?: any;
   updatedBy?: string;
+
+  // --- NOVOS CAMPOS PARA AUDITORIA E EDIÇÃO ---
+  isEdited?: boolean;              // Indica se o movimento foi alterado
+  originalAmount?: number;         // Valor original antes de qualquer edição
+  lastEditReason?: string;         // Motivo da última alteração
+  history?: EntryChangeLog[];      // Histórico completo de modificações
 }
 
 export interface CashSession {
   id?: string;
   businessId: string;
-  openingDate: string; // YYYY-MM-DD
+  openingDate: string; 
   initialBalance: number;
   status: SessionStatus;
   
   // Preenchidos no fecho
   closingDate?: string;
-  finalBalance?: number;     // Saldo contado manualmente
-  expectedBalance?: number;  // Saldo calculado pelo sistema
-  divergenceAmount?: number; // Diferença entre esperado e real
+  finalBalance?: number;     
+  expectedBalance?: number;  
+  divergenceAmount?: number; 
   divergenceNotes?: string;
   
   closedAt?: any;
@@ -149,7 +164,6 @@ export interface CashSession {
   updatedAt?: any;
   updatedBy?: string;
   
-  // Auditoria de ações críticas
   auditLog?: Array<{
     timestamp: any;
     action: string;

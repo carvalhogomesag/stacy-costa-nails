@@ -6,7 +6,9 @@ import {
   Undo2, 
   Trash2, 
   Clock,
-  CalendarCheck
+  CalendarCheck,
+  Pencil,
+  AlertCircle
 } from 'lucide-react';
 import { CashEntry, EntryType, EntryOrigin } from '../../../types';
 import { deleteCashEntry } from '../../../services/cashService';
@@ -15,9 +17,10 @@ import { formatCurrency } from '../../../utils/cashCalculations';
 
 interface CashEntriesListProps {
   entries: CashEntry[];
+  onEditEntry: (entry: CashEntry) => void; // Callback para abrir o modal de edição
 }
 
-const CashEntriesList: React.FC<CashEntriesListProps> = ({ entries }) => {
+const CashEntriesList: React.FC<CashEntriesListProps> = ({ entries, onEditEntry }) => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm(COPY.admin.cash.list.deleteConfirm)) {
@@ -79,10 +82,23 @@ const CashEntriesList: React.FC<CashEntriesListProps> = ({ entries }) => {
                   <h5 className="text-sm font-bold text-primary-dark truncate">
                     {entry.description}
                   </h5>
+                  
+                  {/* TAG DE EDITADO (AUDITORIA VISUAL) */}
+                  {entry.isEdited && (
+                    <div 
+                      className="flex items-center gap-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter"
+                      title={`Motivo: ${entry.lastEditReason}`}
+                    >
+                      <AlertCircle size={8} />
+                      {COPY.admin.cash.list.editedTag}
+                    </div>
+                  )}
+
                   {entry.origin === EntryOrigin.Appointment && (
                     <CalendarCheck size={12} className="text-primary shrink-0" title="Vindo de agendamento" />
                   )}
                 </div>
+                
                 <div className="flex items-center gap-3 text-[10px] text-stone-400 uppercase font-bold tracking-widest">
                   <span className="flex items-center gap-1">
                     <Clock size={10} /> {timeStr}
@@ -102,14 +118,32 @@ const CashEntriesList: React.FC<CashEntriesListProps> = ({ entries }) => {
                   {[EntryType.Expense, EntryType.Refund, EntryType.AppointmentRefund].includes(entry.type) ? '-' : '+'} 
                   {formatCurrency(entry.amount)}
                 </span>
+                {entry.isEdited && (
+                  <span className="block text-[8px] text-stone-400 line-through opacity-60">
+                    {formatCurrency(entry.originalAmount || 0)}
+                  </span>
+                )}
               </div>
               
-              <button 
-                onClick={() => entry.id && handleDelete(entry.id)}
-                className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                {/* BOTÃO EDITAR */}
+                <button 
+                  onClick={() => onEditEntry(entry)}
+                  className="p-2 text-stone-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                  title="Retificar lançamento"
+                >
+                  <Pencil size={16} />
+                </button>
+
+                {/* BOTÃO ELIMINAR */}
+                <button 
+                  onClick={() => entry.id && handleDelete(entry.id)}
+                  className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Apagar permanentemente"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
           </div>
         );

@@ -186,6 +186,17 @@ export const COPY = {
         }
       },
 
+      // --- NOVO: MODAL DE EDIÇÃO COM AUDITORIA ---
+      editModal: {
+        title: "Retificar Lançamento",
+        labelOriginal: "Valor Original",
+        labelNew: "Novo Valor Corrigido",
+        labelReason: "Motivo da Retificação (Obrigatório)",
+        placeholderReason: "Ex: Erro de digitação, Troco incorreto...",
+        submit: "Guardar Alteração",
+        historyTitle: "Histórico de Alterações"
+      },
+
       closeModal: {
         title: "Fecho de Caixa",
         instruction: "Conte o dinheiro físico e some os comprovativos de cartão/MBWay.",
@@ -197,10 +208,10 @@ export const COPY = {
       list: {
         title: "Movimentos da Sessão",
         empty: "Nenhum movimento registado nesta sessão.",
-        deleteConfirm: "Eliminar este lançamento financeiro?"
+        deleteConfirm: "Eliminar este lançamento financeiro?",
+        editedTag: "Editado" // Etiqueta visual para itens alterados
       },
 
-      // Histórico e Exportação
       history: {
         title: "Histórico de Sessões",
         filterLabel: "Filtrar Período",
@@ -215,7 +226,6 @@ export const COPY = {
         }
       },
 
-      // Labels específicas para a diagramação do PDF
       pdfLabels: {
         title: "Relatório de Fluxo de Caixa",
         generatedAt: "Gerado em:",
@@ -223,7 +233,8 @@ export const COPY = {
         summary: "Resumo Financeiro",
         totalIn: "Total de Entradas:",
         totalOut: "Total de Saídas:",
-        net: "Saldo do Período:"
+        net: "Saldo do Período:",
+        auditNotice: "(*) Movimento retificado. Consulte o sistema para o histórico de auditoria."
       },
 
       methods: {

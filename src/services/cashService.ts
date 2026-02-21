@@ -11,11 +11,12 @@ import {
   orderBy, 
   serverTimestamp,
   deleteDoc,
+  getDoc,
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CLIENT_ID } from '../constants';
-import { CashSession, CashEntry, SessionStatus } from '../types';
+import { CashSession, CashEntry, SessionStatus, EntryChangeLog } from '../types';
 
 /**
  * CAMINHOS FIRESTORE (Multi-tenant)
@@ -83,6 +84,49 @@ export const addCashEntry = async (
 };
 
 /**
+ * --- NOVA FUNCIONALIDADE: ATUALIZAÇÃO COM AUDITORIA ---
+ * Atualiza um movimento de caixa registando o histórico de alterações
+ */
+export const updateCashEntry = async (
+  entryId: string,
+  newData: Partial<CashEntry>,
+  reason: string,
+  userId: string
+): Promise<void> => {
+  const entryDoc = doc(db, "businesses", CLIENT_ID, "cashEntries", entryId);
+  const snap = await getDoc(entryDoc);
+
+  if (!snap.exists()) {
+    throw new Error("Movimento não encontrado para edição.");
+  }
+
+  const currentData = snap.data() as CashEntry;
+
+  // 1. Criar o log desta alteração específica
+  const changeLog: EntryChangeLog = {
+    timestamp: serverTimestamp(),
+    previousAmount: currentData.amount,
+    newAmount: newData.amount ?? currentData.amount,
+    reason: reason,
+    updatedBy: userId
+  };
+
+  // 2. Preparar o histórico (anexar ao existente ou iniciar um novo)
+  const updatedHistory = currentData.history ? [...currentData.history, changeLog] : [changeLog];
+
+  // 3. Executar a atualização no Firestore
+  await updateDoc(entryDoc, {
+    ...newData,
+    isEdited: true,
+    originalAmount: currentData.originalAmount ?? currentData.amount, // Mantém o primeiro valor para sempre
+    lastEditReason: reason,
+    history: updatedHistory,
+    updatedAt: serverTimestamp(),
+    updatedBy: userId
+  });
+};
+
+/**
  * Fecha uma sessão de caixa ativa
  */
 export const closeCashSession = async (
@@ -145,13 +189,11 @@ export const getClosedCashSessions = async (days: number = 30): Promise<CashSess
 };
 
 /**
- * CORREÇÃO FASE 3: Obtém movimentos consolidados usando CHUNKS (Lotes)
- * Esta função evita o erro de limite de 30 itens do Firestore e otimiza a performance.
+ * Obtém movimentos consolidados usando CHUNKS (Lotes)
  */
 export const getEntriesForExport = async (sessionIds: string[]): Promise<CashEntry[]> => {
   if (sessionIds.length === 0) return [];
 
-  // Firestore limita operador 'in' a 30 itens. Vamos dividir em lotes.
   const chunks = [];
   for (let i = 0; i < sessionIds.length; i += 30) {
     chunks.push(sessionIds.slice(i, i + 30));
@@ -159,7 +201,6 @@ export const getEntriesForExport = async (sessionIds: string[]): Promise<CashEnt
 
   let allEntries: CashEntry[] = [];
 
-  // Executar consultas por cada lote
   for (const chunk of chunks) {
     const q = query(
       entriesRef,

@@ -16,27 +16,32 @@ import { formatCurrency, calculateCashSummary } from '../../../utils/cashCalcula
 import { getClosedCashSessions, getEntriesForExport } from '../../../services/cashService';
 import { exportEntriesToCSV } from '../../../utils/exportUtils';
 import { exportEntriesToPDF } from '../../../utils/pdfUtils';
-import { CashSession } from '../../../types';
+import { CashSession, CashEntry } from '../../../types';
 
 // Sub-componentes
 import OpenCashModal from './OpenCashModal';
 import CashEntryModal from './CashEntryModal';
 import CloseCashModal from './CloseCashModal';
+import EditEntryModal from './EditEntryModal'; // NOVO: Modal de Auditoria
 import CashSessionDetails from './CashSessionDetails';
 import CashEntriesList from './CashEntriesList';
 
 const DashboardCash: React.FC = () => {
   const { currentSession, entries, summary, loading: sessionLoading } = useCashSession();
   
-  // NAVEGAÇÃO INTERNA
+  // --- NAVEGAÇÃO INTERNA ---
   const [activeSubTab, setActiveSubTab] = useState<'current' | 'history'>('current');
 
-  // CONTROLO DE MODAIS
+  // --- CONTROLO DE MODAIS ---
   const [isOpenModalOpen, setIsOpenModalOpen] = useState(false);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  
+  // --- ESTADOS PARA EDIÇÃO/AUDITORIA ---
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<CashEntry | null>(null);
 
-  // HISTÓRICO
+  // --- ESTADOS DE HISTÓRICO (FASE 3) ---
   const [closedSessions, setClosedSessions] = useState<CashSession[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -57,6 +62,12 @@ const DashboardCash: React.FC = () => {
     } finally {
       setHistoryLoading(false);
     }
+  };
+
+  // HANDLER: Acionar Edição com Auditoria
+  const handleEditEntry = (entry: CashEntry) => {
+    setSelectedEntry(entry);
+    setIsEditModalOpen(true);
   };
 
   // EXPORTAÇÃO CSV
@@ -84,7 +95,6 @@ const DashboardCash: React.FC = () => {
       
       const entriesToExport = await getEntriesForExport(sessionIds);
       
-      // Cálculo do resumo consolidado para o cabeçalho do PDF
       const firstBalance = closedSessions[closedSessions.length - 1]?.initialBalance || currentSession?.initialBalance || 0;
       const exportSummary = calculateCashSummary(firstBalance, entriesToExport);
 
@@ -167,10 +177,10 @@ const DashboardCash: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setIsEntryModalOpen(true)} className="flex-1 md:flex-none bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-primary-hover transition-all flex items-center gap-2 active:scale-95">
+                  <button onClick={() => setIsEntryModalOpen(true)} className="flex-1 md:flex-none bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-primary-hover transition-all flex items-center justify-center gap-2 active:scale-95">
                     <Plus size={18} /> {COPY.admin.cash.btnNewEntry}
                   </button>
-                  <button onClick={() => setIsCloseModalOpen(true)} className="flex-1 md:flex-none bg-white border border-stone-200 text-stone-600 px-6 py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-red-50 hover:text-red-600 transition-all flex items-center gap-2 active:scale-95">
+                  <button onClick={() => setIsCloseModalOpen(true)} className="flex-1 md:flex-none bg-white border border-stone-200 text-stone-600 px-6 py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all flex items-center justify-center gap-2 active:scale-95">
                     <Lock size={18} /> {COPY.admin.cash.btnClose}
                   </button>
                 </div>
@@ -188,7 +198,8 @@ const DashboardCash: React.FC = () => {
                      {entries.length} Movimentos
                    </span>
                 </div>
-                <CashEntriesList entries={entries} />
+                {/* INJETADA A PROP DE EDIÇÃO */}
+                <CashEntriesList entries={entries} onEditEntry={handleEditEntry} />
               </div>
             </div>
           )}
@@ -206,14 +217,14 @@ const DashboardCash: React.FC = () => {
                 <button 
                   onClick={handleExportCSV}
                   disabled={exporting || (closedSessions.length === 0 && !currentSession)}
-                  className="bg-stone-100 text-stone-600 border border-stone-200 px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-stone-200 transition-all disabled:opacity-50 uppercase"
+                  className="bg-stone-100 text-stone-600 border border-stone-200 px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-stone-200 transition-all disabled:opacity-50 uppercase tracking-widest"
                 >
                   <Download size={16} /> CSV
                 </button>
                 <button 
                   onClick={handleExportPDF}
                   disabled={exporting || (closedSessions.length === 0 && !currentSession)}
-                  className="bg-primary/10 text-primary border border-primary/20 px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-primary hover:text-white transition-all disabled:opacity-50 uppercase"
+                  className="bg-primary/10 text-primary border border-primary/20 px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-primary hover:text-white transition-all disabled:opacity-50 uppercase tracking-widest"
                 >
                   {exporting ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />}
                   {COPY.admin.cash.history.exportPdf}
@@ -232,7 +243,7 @@ const DashboardCash: React.FC = () => {
                {closedSessions.map((session) => (
                  <div key={session.id} className="bg-brand-card border border-stone-100 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-primary/30 transition-all group">
                     <div className="flex items-center gap-4">
-                       <div className="w-12 h-12 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover:text-primary transition-colors">
+                       <div className="w-12 h-12 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover:text-primary transition-colors shadow-inner">
                           <Calendar size={24} />
                        </div>
                        <div>
@@ -260,12 +271,23 @@ const DashboardCash: React.FC = () => {
         </div>
       )}
 
-      {/* MODAIS MANTIDOS SEM SUPRESSÃO */}
+      {/* MODAIS */}
       <OpenCashModal isOpen={isOpenModalOpen} onClose={() => setIsOpenModalOpen(false)} />
+      
       {currentSession && (
         <>
           <CashEntryModal isOpen={isEntryModalOpen} onClose={() => setIsEntryModalOpen(false)} sessionId={currentSession.id!} />
           <CloseCashModal isOpen={isCloseModalOpen} onClose={() => setIsCloseModalOpen(false)} session={currentSession} summary={summary} />
+          
+          {/* MODAL DE AUDITORIA DE EDIÇÃO */}
+          <EditEntryModal 
+            isOpen={isEditModalOpen} 
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setSelectedEntry(null);
+            }} 
+            entry={selectedEntry} 
+          />
         </>
       )}
     </div>
