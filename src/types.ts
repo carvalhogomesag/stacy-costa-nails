@@ -110,13 +110,18 @@ export enum SessionStatus {
   Reconciled = 'RECONCILED',
 }
 
-// Interface para o rasto de auditoria de cada movimento
+/**
+ * Interface para o rasto de auditoria (Audit Trail)
+ * Regista o "Antes" e o "Depois" de cada alteração crítica
+ */
 export interface EntryChangeLog {
   timestamp: any;
   previousAmount: number;
   newAmount: number;
-  reason: string;
-  updatedBy: string;
+  previousDescription?: string; // NOVO: Rastrear mudança de contexto
+  newDescription?: string;      // NOVO: Rastrear mudança de contexto
+  reason: string;               // Justificação obrigatória
+  updatedBy: string;            // ID do administrador que fez a retificação
 }
 
 export interface CashEntry {
@@ -136,11 +141,12 @@ export interface CashEntry {
   updatedAt?: any;
   updatedBy?: string;
 
-  // --- NOVOS CAMPOS PARA AUDITORIA E EDIÇÃO ---
-  isEdited?: boolean;              // Indica se o movimento foi alterado
-  originalAmount?: number;         // Valor original antes de qualquer edição
-  lastEditReason?: string;         // Motivo da última alteração
-  history?: EntryChangeLog[];      // Histórico completo de modificações
+  // --- CAMPOS DE AUDITORIA ---
+  isEdited?: boolean;              
+  originalAmount?: number;         
+  originalDescription?: string;    // NOVO: Valor original da descrição
+  lastEditReason?: string;         
+  history?: EntryChangeLog[];      
 }
 
 export interface CashSession {

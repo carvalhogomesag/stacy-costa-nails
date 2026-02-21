@@ -11,7 +11,8 @@ import {
   orderBy, 
   serverTimestamp,
   deleteDoc,
-  getDoc
+  getDoc,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CLIENT_ID } from '../constants';
@@ -83,8 +84,8 @@ export const addCashEntry = async (
 };
 
 /**
- * ATUALIZAÇÃO COM AUDITORIA (CORRIGIDO)
- * Atualiza um movimento de caixa registando o histórico de alterações
+ * ATUALIZAÇÃO COM AUDITORIA AVANÇADA (VALOR E DESCRIÇÃO)
+ * Atualiza um movimento de caixa registando o rasto completo de alterações
  */
 export const updateCashEntry = async (
   entryId: string,
@@ -101,27 +102,30 @@ export const updateCashEntry = async (
 
   const currentData = snap.data() as CashEntry;
 
-  // CORREÇÃO: Usamos new Date() em vez de serverTimestamp() porque 
-  // o Firestore não aceita serverTimestamp() dentro de Arrays.
-  const changeLog: any = {
-    timestamp: new Date(), 
+  // 1. Criar o log detalhado desta alteração específica
+  const changeLog: EntryChangeLog = {
+    timestamp: new Date(), // Firestore não aceita serverTimestamp dentro de arrays
     previousAmount: currentData.amount,
     newAmount: newData.amount ?? currentData.amount,
+    previousDescription: currentData.description,
+    newDescription: newData.description ?? currentData.description,
     reason: reason,
     updatedBy: userId
   };
 
-  // Preparar o histórico (anexar ao existente ou iniciar um novo)
+  // 2. Preparar o histórico (anexar ao existente ou iniciar um novo)
   const updatedHistory = currentData.history ? [...currentData.history, changeLog] : [changeLog];
 
-  // Executar a atualização no Firestore
+  // 3. Executar a atualização no Firestore preservando snapshots originais
   await updateDoc(entryDoc, {
     ...newData,
     isEdited: true,
+    // Garante que o valor e descrição originais nunca são perdidos, mesmo após múltiplas edições
     originalAmount: currentData.originalAmount ?? currentData.amount,
+    originalDescription: currentData.originalDescription ?? currentData.description,
     lastEditReason: reason,
     history: updatedHistory,
-    updatedAt: serverTimestamp(), // Aqui continua serverTimestamp pois é campo de topo
+    updatedAt: serverTimestamp(),
     updatedBy: userId
   });
 };
@@ -154,7 +158,7 @@ export const deleteCashEntry = async (entryId: string): Promise<void> => {
 };
 
 /**
- * Obtém todas as entradas de uma sessão específica (Padronizado para DESC)
+ * Obtém todas as entradas de uma sessão específica (DESC)
  */
 export const getCashEntriesBySession = async (sessionId: string): Promise<CashEntry[]> => {
   const q = query(

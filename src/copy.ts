@@ -193,7 +193,13 @@ export const COPY = {
         labelReason: "Motivo da Retificação (Obrigatório)",
         placeholderReason: "Ex: Erro de digitação, Troco incorreto...",
         submit: "Guardar Alteração",
-        historyTitle: "Histórico de Alterações"
+        historyTitle: "Histórico de Alterações",
+        auditTable: {
+          colDate: "Data/Hora",
+          colAdmin: "Admin",
+          colChange: "Alteração",
+          colReason: "Justificação"
+        }
       },
 
       closeModal: {
@@ -208,7 +214,14 @@ export const COPY = {
         title: "Movimentos da Sessão",
         empty: "Nenhum movimento registado nesta sessão.",
         deleteConfirm: "Eliminar este lançamento financeiro?",
-        editedTag: "Editado"
+        editedTag: "Editado",
+        auditDetails: {
+          title: "Rasto de Auditoria",
+          original: "Original",
+          current: "Atual",
+          diff: "Impacto",
+          reason: "Motivo da última alteração"
+        }
       },
 
       history: {
@@ -217,8 +230,8 @@ export const COPY = {
         exportCsv: "Exportar para CSV (Excel)",
         exportPdf: "Gerar Relatório PDF",
         empty: "Nenhum histórico encontrado para este período.",
-        btnBack: "Voltar à Lista", // NOVO
-        editModeNotice: "Modo de Auditoria Ativo", // NOVO
+        btnBack: "Voltar à Lista",
+        editModeNotice: "Modo de Auditoria Ativo",
         ranges: {
           last7: "Últimos 7 dias",
           last30: "Últimos 30 dias",
@@ -235,7 +248,10 @@ export const COPY = {
         totalIn: "Total de Entradas:",
         totalOut: "Total de Saídas:",
         net: "Saldo do Período:",
-        auditNotice: "(*) Movimento retificado. Consulte o sistema para o histórico de auditoria."
+        auditNotice: "(*) Movimento retificado. Consulte o Anexo de Auditoria na última página.",
+        auditSectionTitle: "Anexo: Histórico de Retificações Financeiras",
+        auditColRef: "Movimento",
+        auditColHistory: "Evolução do Valor e Motivo"
       },
 
       methods: {
