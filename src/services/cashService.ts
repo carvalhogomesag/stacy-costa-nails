@@ -10,8 +10,8 @@ import {
   getDocs, 
   orderBy, 
   serverTimestamp,
-  getDoc,
-  deleteDoc
+  deleteDoc,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CLIENT_ID } from '../constants';
@@ -35,7 +35,6 @@ export const getOpenCashSession = async (): Promise<CashSession | null> => {
   const querySnapshot = await getDocs(q);
   if (querySnapshot.empty) return null;
 
-  // Em teoria, só deve existir uma sessão aberta por vez
   const docSnap = querySnapshot.docs[0];
   return { id: docSnap.id, ...docSnap.data() } as CashSession;
 };
@@ -46,13 +45,11 @@ export const getOpenCashSession = async (): Promise<CashSession | null> => {
 export const openCashSession = async (
   data: Pick<CashSession, 'openingDate' | 'initialBalance' | 'createdBy'>
 ): Promise<string> => {
-  // 1. Verificar se já existe uma sessão aberta para evitar duplicados
   const activeSession = await getOpenCashSession();
   if (activeSession) {
     throw new Error("Já existe uma sessão de caixa aberta.");
   }
 
-  // 2. Criar a nova sessão
   const newSession: Omit<CashSession, 'id'> = {
     businessId: CLIENT_ID,
     openingDate: data.openingDate,
@@ -105,7 +102,7 @@ export const closeCashSession = async (
 };
 
 /**
- * Elimina uma entrada de caixa (apenas para correções manuais)
+ * Elimina uma entrada de caixa
  */
 export const deleteCashEntry = async (entryId: string): Promise<void> => {
   const entryDoc = doc(db, "businesses", CLIENT_ID, "cashEntries", entryId);
@@ -119,9 +116,70 @@ export const getCashEntriesBySession = async (sessionId: string): Promise<CashEn
   const q = query(
     entriesRef, 
     where("sessionId", "==", sessionId),
-    orderBy("createdAt", "desc")
+    orderBy("createdAt", "asc")
   );
   
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CashEntry));
+};
+
+// --- FASE 3: FUNÇÕES DE HISTÓRICO E RELATÓRIOS ---
+
+/**
+ * Obtém sessões fechadas num intervalo de dias
+ * @param days Número de dias para olhar para trás (ex: 7, 30)
+ */
+export const getClosedCashSessions = async (days: number = 30): Promise<CashSession[]> => {
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() - days);
+  const minDateStr = minDate.toISOString().split('T')[0];
+
+  const q = query(
+    sessionsRef,
+    where("status", "==", SessionStatus.Closed),
+    where("openingDate", ">=", minDateStr),
+    orderBy("openingDate", "desc")
+  );
+
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CashSession));
+};
+
+/**
+ * Obtém movimentos consolidados de várias sessões (Para Exportação CSV)
+ * @param sessionIds Lista de IDs de sessões para extrair movimentos
+ */
+export const getEntriesForExport = async (sessionIds: string[]): Promise<CashEntry[]> => {
+  if (sessionIds.length === 0) return [];
+
+  // O Firestore tem um limite de 10-30 itens no operador 'in'
+  // Para exportações massivas, fazemos o fetch por businessId e filtramos via código
+  // ou fazemos queries em lote (chunks). Aqui faremos por businessId para simplicidade de MVP.
+  const q = query(
+    entriesRef,
+    where("businessId", "==", CLIENT_ID),
+    orderBy("createdAt", "desc")
+  );
+
+  const querySnapshot = await getDocs(q);
+  const allEntries = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CashEntry));
+  
+  // Filtramos apenas as que pertencem às sessões selecionadas
+  return allEntries.filter(entry => sessionIds.includes(entry.sessionId));
+};
+
+/**
+ * Pesquisa uma sessão específica pela data
+ */
+export const getSessionByDate = async (dateStr: string): Promise<CashSession | null> => {
+  const q = query(
+    sessionsRef,
+    where("openingDate", "==", dateStr)
+  );
+  
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) return null;
+  
+  const docSnap = querySnapshot.docs[0];
+  return { id: docSnap.id, ...docSnap.data() } as CashSession;
 };

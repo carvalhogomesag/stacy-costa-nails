@@ -27,7 +27,14 @@ export interface Appointment {
   date: string; 
   startTime: string; 
   endTime: string;   
-  createdAt: any;    
+  createdAt: any;
+  
+  // --- NOVOS CAMPOS PARA INTEGRAÇÃO COM CAIXA (FASE 2) ---
+  isPaid?: boolean;               // Indica se o serviço já foi cobrado
+  paymentMethod?: PaymentMethod;  // Método utilizado no acerto
+  paidAmount?: number;            // Valor real pago (permite descontos ou taxas)
+  cashEntryId?: string;           // Vínculo direto com o lançamento no caixa
+  updatedAt?: any;
 }
 
 export interface WorkConfig {

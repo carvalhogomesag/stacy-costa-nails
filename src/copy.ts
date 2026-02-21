@@ -104,7 +104,7 @@ export const COPY = {
       tabs: {
         appointments: "MARCAÇÕES",
         services: "SERVIÇOS",
-        cash: "CAIXA", // NOVO
+        cash: "CAIXA",
         design: "DESIGN",
         settings: "CONFIG"
       },
@@ -138,7 +138,7 @@ export const COPY = {
       saveBtn: "Guardar Configuração"
     },
 
-    // --- NOVO: MÓDULO DE CAIXA ---
+    // --- MÓDULO DE CAIXA ---
     cash: {
       title: "Controlo de Caixa",
       subtitle: "Fluxo financeiro diário",
@@ -146,6 +146,12 @@ export const COPY = {
       btnOpen: "Abrir Caixa Hoje",
       btnClose: "Fechar Caixa",
       btnNewEntry: "Novo Lançamento",
+
+      // FASE 3: Sub-navegação do Caixa
+      tabs: {
+        current: "Sessão Atual",
+        history: "Histórico & Relatórios"
+      },
       
       summary: {
         balance: "Saldo Atual",
@@ -153,7 +159,9 @@ export const COPY = {
         expense: "Total Saídas",
         expected: "Saldo Esperado",
         real: "Saldo Real (Contado)",
-        diff: "Divergência"
+        diff: "Divergência",
+        billing: "Faturação Total",
+        average: "Média por Sessão"
       },
 
       openModal: {
@@ -191,6 +199,20 @@ export const COPY = {
         title: "Movimentos da Sessão",
         empty: "Nenhum movimento registado nesta sessão.",
         deleteConfirm: "Eliminar este lançamento financeiro?"
+      },
+
+      // FASE 3: Histórico e Exportação
+      history: {
+        title: "Histórico de Sessões",
+        filterLabel: "Filtrar Período",
+        exportCsv: "Exportar para CSV (Excel)",
+        empty: "Nenhum histórico encontrado para este período.",
+        ranges: {
+          last7: "Últimos 7 dias",
+          last30: "Últimos 30 dias",
+          thisMonth: "Este mês",
+          all: "Todo o histórico"
+        }
       },
 
       methods: {

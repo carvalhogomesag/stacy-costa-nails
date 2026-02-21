@@ -9,13 +9,17 @@ import {
   Loader2, 
   Save, 
   Trash2, 
-  Plus 
+  Plus,
+  CheckCircle2,
+  CreditCard,
+  Banknote
 } from 'lucide-react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { getOpenCashSession, addCashEntry } from '../services/cashService';
 import { CLIENT_ID } from '../constants';
 import { COPY } from '../copy';
-import { Service, Appointment } from '../types';
+import { Service, Appointment, PaymentMethod, EntryType, EntryOrigin } from '../types';
 
 interface AdminBookingModalProps {
   isOpen: boolean;
@@ -26,6 +30,8 @@ interface AdminBookingModalProps {
 
 const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, services, initialData }) => {
   const [loading, setLoading] = useState(false);
+  
+  // Estados do Formulário
   const [formData, setFormData] = useState({
     clientName: '',
     clientPhone: '',
@@ -33,6 +39,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     date: new Date().toISOString().split('T')[0],
     startTime: '11:00'
   });
+
+  // Estados de Pagamento (Fase 2)
+  const [isPaid, setIsPaid] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.Cash);
+  const [paidAmount, setPaidAmount] = useState<string>('');
 
   useEffect(() => {
     if (initialData) {
@@ -43,6 +54,9 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         date: initialData.date,
         startTime: initialData.startTime
       });
+      setIsPaid(initialData.isPaid || false);
+      setPaymentMethod(initialData.paymentMethod || PaymentMethod.Cash);
+      setPaidAmount(initialData.paidAmount?.toString() || '');
     } else {
       setFormData({
         clientName: '',
@@ -51,12 +65,14 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         date: new Date().toISOString().split('T')[0],
         startTime: '11:00'
       });
+      setIsPaid(false);
+      setPaymentMethod(PaymentMethod.Cash);
+      setPaidAmount('');
     }
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
-  // Opções de tempo em blocos de 15 minutos (08h às 21h)
   const timeOptions = Array.from({ length: 53 }, (_, i) => {
     const totalMinutes = 8 * 60 + i * 15;
     const h = Math.floor(totalMinutes / 60);
@@ -68,43 +84,81 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     e.preventDefault();
     setLoading(true);
 
+    const user = auth.currentUser;
     const selectedService = services.find(s => s.id === formData.serviceId);
+    
     if (!selectedService) {
       alert("Por favor, selecione um serviço.");
       setLoading(false);
       return;
     }
 
+    // Validação de Caixa se estiver a marcar como pago agora
+    let activeSessionId = '';
+    if (isPaid && !initialData?.isPaid) {
+      const session = await getOpenCashSession();
+      if (!session) {
+        alert("Não é possível marcar como pago: O CAIXA ESTÁ FECHADO. Abra o caixa na aba 'Caixa' antes de prosseguir.");
+        setLoading(false);
+        return;
+      }
+      activeSessionId = session.id!;
+    }
+
     try {
-      // Cálculo de EndTime baseado na duração do serviço
       const [h, m] = formData.startTime.split(':').map(Number);
       const startInMinutes = h * 60 + m;
       const endInMinutes = startInMinutes + selectedService.duration;
       const endTime = `${Math.floor(endInMinutes / 60).toString().padStart(2, '0')}:${(endInMinutes % 60).toString().padStart(2, '0')}`;
 
-      // Objeto de dados com a cor injetada
-      const appointmentData = {
+      const amountToRegister = parseFloat(paidAmount.replace(',', '.')) || 0;
+
+      const appointmentData: any = {
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
-        serviceColor: selectedService.color || '#f5f5f4', // Desnormalização da cor para o calendário
+        serviceColor: selectedService.color || '#f5f5f4',
         date: formData.date,
         startTime: formData.startTime,
         endTime: endTime,
+        isPaid,
+        paymentMethod: isPaid ? paymentMethod : null,
+        paidAmount: isPaid ? amountToRegister : 0,
         updatedAt: serverTimestamp()
       };
 
+      let finalApptId = initialData?.id;
+
+      // 1. Gravar/Atualizar Agendamento
       if (initialData?.id) {
-        // Atualizar marcação existente
         const docRef = doc(db, "businesses", CLIENT_ID, "appointments", initialData.id);
         await updateDoc(docRef, appointmentData);
       } else {
-        // Criar nova marcação
-        await addDoc(collection(db, "businesses", CLIENT_ID, "appointments"), {
+        const docRef = await addDoc(collection(db, "businesses", CLIENT_ID, "appointments"), {
           ...appointmentData,
           createdAt: serverTimestamp()
         });
+        finalApptId = docRef.id;
+      }
+
+      // 2. Registar no Caixa se for um NOVO pagamento
+      if (isPaid && !initialData?.isPaid && activeSessionId && user) {
+        const entryId = await addCashEntry({
+          businessId: CLIENT_ID,
+          sessionId: activeSessionId,
+          type: EntryType.AppointmentIncome,
+          amount: amountToRegister,
+          paymentMethod: paymentMethod,
+          origin: EntryOrigin.Appointment,
+          description: `Serviço: ${selectedService.name} - Cliente: ${formData.clientName}`,
+          relatedAppointmentId: finalApptId,
+          createdBy: user.uid
+        });
+
+        // Vincular a entrada ao agendamento
+        const apptDoc = doc(db, "businesses", CLIENT_ID, "appointments", finalApptId!);
+        await updateDoc(apptDoc, { cashEntryId: entryId });
       }
 
       onClose();
@@ -131,17 +185,15 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     }
   };
 
-  // Helper para mostrar a cor do serviço selecionado no formulário
   const currentServiceColor = services.find(s => s.id === formData.serviceId)?.color || 'transparent';
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      {/* Overlay com Blur Semântico */}
       <div className="fixed inset-0 bg-brand-footer/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       <div className="relative bg-brand-card w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 z-[210]">
         
-        {/* Header Estilo Admin Premium */}
+        {/* Header */}
         <div className="p-6 border-b border-stone-100 bg-brand-card flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className={`w-12 h-12 ${initialData ? 'bg-primary' : 'bg-primary-dark'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
@@ -152,7 +204,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
                 {initialData ? 'Detalhes da Marcação' : 'Nova Marcação Manual'}
               </h2>
               <p className="text-primary text-[10px] font-black uppercase tracking-widest mt-0.5">
-                {initialData ? 'Editar Registo' : 'Painel de Gestão'}
+                {initialData?.isPaid ? 'SERVIÇO PAGO' : 'Painel de Gestão'}
               </p>
             </div>
           </div>
@@ -161,9 +213,9 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6 bg-brand-card">
+        <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6 bg-brand-card max-h-[80vh] overflow-y-auto scrollbar-thin">
+          {/* Dados do Cliente */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Nome do Cliente */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
                 <User size={12} className="text-primary" /> {COPY.bookingModal.placeholders.name}
@@ -172,13 +224,12 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
                 required
                 type="text"
                 placeholder="Ex: Maria Silva"
-                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all font-medium"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary transition-all font-medium"
                 value={formData.clientName}
                 onChange={e => setFormData({...formData, clientName: e.target.value})}
               />
             </div>
 
-            {/* Telemóvel */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
                 <Phone size={12} className="text-primary" /> {COPY.bookingModal.placeholders.phone}
@@ -187,27 +238,24 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
                 required
                 type="tel"
                 placeholder="9xx xxx xxx"
-                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all font-medium"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary transition-all font-medium"
                 value={formData.clientPhone}
                 onChange={e => setFormData({...formData, clientPhone: e.target.value})}
               />
             </div>
           </div>
 
-          {/* Seleção de Serviço com Preview de Cor */}
+          {/* Seleção de Serviço */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center mb-1">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
                 <Scissors size={12} className="text-primary" /> {COPY.admin.dashboard.tabs.services}
               </label>
-              <div 
-                className="w-4 h-4 rounded-full border border-black/10 shadow-sm transition-all duration-300"
-                style={{ backgroundColor: currentServiceColor }}
-              />
+              <div className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: currentServiceColor }} />
             </div>
             <select 
               required
-              className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all appearance-none font-medium"
+              className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary appearance-none font-medium"
               value={formData.serviceId}
               onChange={e => setFormData({...formData, serviceId: e.target.value})}
             >
@@ -218,8 +266,8 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </select>
           </div>
 
+          {/* Data e Hora */}
           <div className="grid grid-cols-2 gap-5">
-            {/* Data */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
                 <Calendar size={12} className="text-primary" /> Data
@@ -227,20 +275,19 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
               <input 
                 required
                 type="date"
-                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all font-medium"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary font-medium"
                 value={formData.date}
                 onChange={e => setFormData({...formData, date: e.target.value})}
               />
             </div>
 
-            {/* Hora de Início */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
                 <Clock size={12} className="text-primary" /> Início
               </label>
               <select 
                 required
-                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary focus:bg-white transition-all appearance-none font-medium text-center"
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary appearance-none font-medium text-center"
                 value={formData.startTime}
                 onChange={e => setFormData({...formData, startTime: e.target.value})}
               >
@@ -249,14 +296,74 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          <div className="flex gap-4 pt-4">
+          {/* SECÇÃO DE PAGAMENTO (Fase 2) */}
+          <div className="pt-4 border-t border-stone-100 space-y-4">
+             <div className="flex items-center justify-between bg-stone-50 p-4 rounded-2xl border border-stone-100">
+                <div className="flex items-center gap-3">
+                   <div className={`p-2 rounded-lg ${isPaid ? 'bg-green-100 text-green-600' : 'bg-stone-200 text-stone-500'}`}>
+                      <CheckCircle2 size={18} />
+                   </div>
+                   <div>
+                      <p className="text-xs font-black text-primary-dark uppercase">Serviço Pago?</p>
+                      <p className="text-[10px] text-stone-400 uppercase">Registar no Caixa</p>
+                   </div>
+                </div>
+                <input 
+                  type="checkbox"
+                  checked={isPaid}
+                  disabled={initialData?.isPaid} // Não permite desmarcar se já foi processado no caixa
+                  onChange={(e) => setIsPaid(e.target.checked)}
+                  className="w-6 h-6 accent-green-600 cursor-pointer"
+                />
+             </div>
+
+             {isPaid && (
+               <div className="space-y-4 animate-in slide-in-from-top-2">
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2">
+                           <CreditCard size={12} className="text-primary" /> Método
+                        </label>
+                        <select 
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                          className="w-full bg-stone-50 border border-stone-100 rounded-xl p-3 text-sm font-bold text-primary-dark outline-none focus:border-primary"
+                        >
+                           {Object.values(PaymentMethod).map(m => (
+                             <option key={m} value={m}>{(COPY.admin.cash.methods as any)[m] || m}</option>
+                           ))}
+                        </select>
+                     </div>
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2">
+                           <Banknote size={12} className="text-primary" /> Valor Cobrado
+                        </label>
+                        <input 
+                          type="text"
+                          placeholder="0,00€"
+                          value={paidAmount}
+                          onChange={(e) => setPaidAmount(e.target.value)}
+                          className="w-full bg-stone-50 border border-stone-100 rounded-xl p-3 text-sm font-black text-primary-dark outline-none focus:border-primary"
+                        />
+                     </div>
+                  </div>
+                  {initialData?.isPaid && (
+                    <p className="text-[9px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg text-center uppercase tracking-tighter">
+                      Este pagamento já foi processado no caixa e não pode ser alterado aqui.
+                    </p>
+                  )}
+               </div>
+             )}
+          </div>
+
+          {/* Botões de Ação */}
+          <div className="flex gap-4 pt-2">
             {initialData && (
               <button 
                 type="button"
                 onClick={handleDelete}
                 disabled={loading}
                 className="flex-none p-4 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-all active:scale-95 border border-red-100"
-                title="Eliminar marcação"
               >
                 <Trash2 size={22} />
               </button>
