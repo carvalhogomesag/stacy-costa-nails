@@ -20,6 +20,7 @@ import { CashSession, CashEntry, SessionStatus, EntryChangeLog } from '../types'
 
 /**
  * CAMINHOS FIRESTORE (Multi-tenant)
+ * Todas as coleções seguem obrigatoriamente o padrão: businesses/{CLIENT_ID}/coleção
  */
 const sessionsRef = collection(db, "businesses", CLIENT_ID, "cashSessions");
 const entriesRef = collection(db, "businesses", CLIENT_ID, "cashEntries");
@@ -84,8 +85,8 @@ export const addCashEntry = async (
 };
 
 /**
- * --- NOVA FUNCIONALIDADE: ATUALIZAÇÃO COM AUDITORIA ---
- * Atualiza um movimento de caixa registando o histórico de alterações
+ * ATUALIZAÇÃO COM AUDITORIA
+ * Atualiza um movimento de caixa registando o rasto de alterações
  */
 export const updateCashEntry = async (
   entryId: string,
@@ -102,7 +103,7 @@ export const updateCashEntry = async (
 
   const currentData = snap.data() as CashEntry;
 
-  // 1. Criar o log desta alteração específica
+  // 1. Criar o log desta alteração
   const changeLog: EntryChangeLog = {
     timestamp: serverTimestamp(),
     previousAmount: currentData.amount,
@@ -114,11 +115,11 @@ export const updateCashEntry = async (
   // 2. Preparar o histórico (anexar ao existente ou iniciar um novo)
   const updatedHistory = currentData.history ? [...currentData.history, changeLog] : [changeLog];
 
-  // 3. Executar a atualização no Firestore
+  // 3. Executar a atualização
   await updateDoc(entryDoc, {
     ...newData,
     isEdited: true,
-    originalAmount: currentData.originalAmount ?? currentData.amount, // Mantém o primeiro valor para sempre
+    originalAmount: currentData.originalAmount ?? currentData.amount,
     lastEditReason: reason,
     history: updatedHistory,
     updatedAt: serverTimestamp(),
@@ -154,23 +155,22 @@ export const deleteCashEntry = async (entryId: string): Promise<void> => {
 };
 
 /**
- * Obtém todas as entradas de uma sessão específica
+ * CORREÇÃO: Obtém todas as entradas de uma sessão específica
+ * Padronizado para DESC para usar o mesmo índice do sistema de Realtime
  */
 export const getCashEntriesBySession = async (sessionId: string): Promise<CashEntry[]> => {
   const q = query(
     entriesRef, 
     where("sessionId", "==", sessionId),
-    orderBy("createdAt", "asc")
+    orderBy("createdAt", "desc") // Alterado para DESC para consistência total
   );
   
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CashEntry));
 };
 
-// --- FASE 3: FUNÇÕES DE HISTÓRICO E RELATÓRIOS ---
-
 /**
- * Obtém sessões fechadas num intervalo de dias
+ * FASE 3: Obtém sessões fechadas num intervalo de dias
  */
 export const getClosedCashSessions = async (days: number = 30): Promise<CashSession[]> => {
   const minDate = new Date();
@@ -189,7 +189,8 @@ export const getClosedCashSessions = async (days: number = 30): Promise<CashSess
 };
 
 /**
- * Obtém movimentos consolidados usando CHUNKS (Lotes)
+ * FASE 3: Obtém movimentos consolidados usando lotes (Chunks)
+ * Evita o limite de 30 itens do operador 'in' do Firestore
  */
 export const getEntriesForExport = async (sessionIds: string[]): Promise<CashEntry[]> => {
   if (sessionIds.length === 0) return [];
