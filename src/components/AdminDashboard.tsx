@@ -3,7 +3,7 @@ import { auth, db } from '../firebase';
 import { onSnapshot, query, collection, orderBy } from 'firebase/firestore';
 import { 
   LogOut, Heart, LayoutDashboard, Settings, 
-  Briefcase, Palette, Download, Menu, X 
+  Briefcase, Palette, Download, Menu, X, Wallet 
 } from 'lucide-react';
 import { Appointment, Service } from '../types';
 import { BUSINESS_INFO, CLIENT_ID } from '../constants';
@@ -14,6 +14,7 @@ import DashboardAppointments from './admin/DashboardAppointments';
 import DashboardServices from './admin/DashboardServices';
 import DashboardDesign from './admin/DashboardDesign';
 import DashboardSettings from './admin/DashboardSettings';
+import DashboardCash from './admin/cash/DashboardCash'; // NOVO: Componente do módulo de caixa
 import AdminBookingModal from './AdminBookingModal';
 
 interface AdminDashboardProps {
@@ -24,7 +25,7 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable, onInstallClick }) => {
   // --- NAVEGAÇÃO E UI ---
-  const [activeTab, setActiveTab] = useState<'appointments' | 'services' | 'visual' | 'settings'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'services' | 'cash' | 'visual' | 'settings'>('appointments');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // --- ESTADOS COMPARTILHADOS (MODAL & SERVIÇOS) ---
@@ -58,7 +59,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
     setIsAdminBookingOpen(true);
   };
 
-  const handleTabChange = (tab: 'appointments' | 'services' | 'visual' | 'settings') => {
+  const handleTabChange = (tab: 'appointments' | 'services' | 'cash' | 'visual' | 'settings') => {
     setActiveTab(tab);
     setIsMobileMenuOpen(false); // Fecha o menu ao trocar de aba no mobile
   };
@@ -66,6 +67,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
   const menuItems = [
     { id: 'appointments', label: COPY.admin.dashboard.tabs.appointments, icon: <LayoutDashboard size={20} /> },
     { id: 'services', label: COPY.admin.dashboard.tabs.services, icon: <Briefcase size={20} /> },
+    { id: 'cash', label: COPY.admin.dashboard.tabs.cash, icon: <Wallet size={20} /> }, // NOVO
     { id: 'visual', label: COPY.admin.dashboard.tabs.design, icon: <Palette size={20} /> },
     { id: 'settings', label: COPY.admin.dashboard.tabs.settings, icon: <Settings size={20} /> },
   ];
@@ -93,20 +95,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
           </div>
 
           {/* NAVEGAÇÃO DESKTOP (Pills) */}
-          <nav className="hidden lg:flex bg-stone-100 p-1 rounded-2xl border border-stone-200">
-            {menuItems.map((item) => (
-              <button 
-                key={item.id}
-                onClick={() => handleTabChange(item.id as any)}
-                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black transition-all tracking-wider ${
-                  activeTab === item.id 
-                  ? 'bg-primary text-white shadow-md' 
-                  : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+          <nav className="hidden lg:flex bg-stone-100 p-1 rounded-2xl border border-stone-200 overflow-x-auto no-scrollbar">
+            <div className="flex gap-1">
+              {menuItems.map((item) => (
+                <button 
+                  key={item.id}
+                  onClick={() => handleTabChange(item.id as any)}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black transition-all tracking-wider shrink-0 ${
+                    activeTab === item.id 
+                    ? 'bg-primary text-white shadow-md' 
+                    : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </nav>
           
           {/* AÇÕES (Desktop e Mobile Trigger) */}
@@ -186,6 +190,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
           
           {activeTab === 'services' && (
             <DashboardServices />
+          )}
+
+          {activeTab === 'cash' && (
+            <DashboardCash />
           )}
 
           {activeTab === 'visual' && (

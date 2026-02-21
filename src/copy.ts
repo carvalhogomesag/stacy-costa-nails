@@ -104,6 +104,7 @@ export const COPY = {
       tabs: {
         appointments: "MARCAÇÕES",
         services: "SERVIÇOS",
+        cash: "CAIXA", // NOVO
         design: "DESIGN",
         settings: "CONFIG"
       },
@@ -135,6 +136,71 @@ export const COPY = {
       blockTitle: "Bloquear Horário",
       activeBlocks: "Bloqueios Ativos",
       saveBtn: "Guardar Configuração"
+    },
+
+    // --- NOVO: MÓDULO DE CAIXA ---
+    cash: {
+      title: "Controlo de Caixa",
+      subtitle: "Fluxo financeiro diário",
+      noSession: "Não existe um caixa aberto para hoje.",
+      btnOpen: "Abrir Caixa Hoje",
+      btnClose: "Fechar Caixa",
+      btnNewEntry: "Novo Lançamento",
+      
+      summary: {
+        balance: "Saldo Atual",
+        income: "Total Entradas",
+        expense: "Total Saídas",
+        expected: "Saldo Esperado",
+        real: "Saldo Real (Contado)",
+        diff: "Divergência"
+      },
+
+      openModal: {
+        title: "Abertura de Caixa",
+        label: "Valor Inicial em Fundo de Maneio",
+        placeholder: "0,00€",
+        submit: "Confirmar Abertura"
+      },
+
+      entryModal: {
+        title: "Novo Lançamento",
+        type: "Tipo de Movimento",
+        amount: "Valor",
+        method: "Método de Pagamento",
+        desc: "Descrição",
+        placeholderDesc: "Ex: Venda de produto, Café, Limpeza...",
+        submit: "Registar Movimento",
+        types: {
+          income: "Receita Manual",
+          expense: "Despesa / Saída",
+          adj: "Ajuste de Saldo",
+          refund: "Reembolso"
+        }
+      },
+
+      closeModal: {
+        title: "Fecho de Caixa",
+        instruction: "Conte o dinheiro físico e some os comprovativos de cartão/MBWay.",
+        labelReal: "Total Contado em Caixa",
+        labelNotes: "Notas de Fecho (Obrigatório se houver divergência)",
+        submit: "Encerrar Sessão"
+      },
+
+      list: {
+        title: "Movimentos da Sessão",
+        empty: "Nenhum movimento registado nesta sessão.",
+        deleteConfirm: "Eliminar este lançamento financeiro?"
+      },
+
+      methods: {
+        CASH: "Dinheiro",
+        CARD: "Cartão",
+        MBWAY: "MBWay",
+        PIX: "Pix",
+        TRANSFER: "Transferência",
+        OTHER: "Outro"
+      }
     }
   }
 };
