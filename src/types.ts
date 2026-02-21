@@ -29,10 +29,12 @@ export interface Appointment {
   endTime: string;   
   createdAt: any;
   
-  // --- NOVOS CAMPOS PARA INTEGRAÇÃO COM CAIXA (FASE 2) ---
+  // --- CAMPOS PARA INTEGRAÇÃO COM CAIXA ---
   isPaid?: boolean;               // Indica se o serviço já foi cobrado
   paymentMethod?: PaymentMethod;  // Método utilizado no acerto
-  paidAmount?: number;            // Valor real pago (permite descontos ou taxas)
+  paidAmount?: number;            // Valor real final pago pelo cliente
+  discount?: number;              // Valor do desconto aplicado (em Euros)
+  basePriceSnapshot?: number;     // Preço base do serviço no momento da finalização
   cashEntryId?: string;           // Vínculo direto com o lançamento no caixa
   updatedAt?: any;
 }
@@ -76,7 +78,7 @@ export interface BusinessProfile {
   updatedAt?: any;
 }
 
-// --- NOVAS INTERFACES E ENUMS PARA O MÓDULO DE CAIXA ---
+// --- INTERFACES E ENUMS PARA O MÓDULO DE CAIXA ---
 
 export enum EntryType {
   Income = 'INCOME',               // Receita manual

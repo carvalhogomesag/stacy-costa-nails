@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   Calendar, 
@@ -12,7 +12,8 @@ import {
   Plus,
   CheckCircle2,
   CreditCard,
-  Banknote
+  Banknote,
+  Tag
 } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -40,10 +41,16 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     startTime: '11:00'
   });
 
-  // Estados de Pagamento (Fase 2)
+  // Estados de Pagamento e Financeiro
   const [isPaid, setIsPaid] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.Cash);
+  const [discount, setDiscount] = useState<string>('0');
   const [paidAmount, setPaidAmount] = useState<string>('');
+
+  // Helper para extrair número de uma string de preço (ex: "25€" -> 25)
+  const parsePrice = (priceStr: string): number => {
+    return parseFloat(priceStr.replace(/[^0-9,.]/g, '').replace(',', '.')) || 0;
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -56,6 +63,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
       });
       setIsPaid(initialData.isPaid || false);
       setPaymentMethod(initialData.paymentMethod || PaymentMethod.Cash);
+      setDiscount(initialData.discount?.toString() || '0');
       setPaidAmount(initialData.paidAmount?.toString() || '');
     } else {
       setFormData({
@@ -67,9 +75,24 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
       });
       setIsPaid(false);
       setPaymentMethod(PaymentMethod.Cash);
+      setDiscount('0');
       setPaidAmount('');
     }
   }, [initialData, isOpen]);
+
+  // LÓGICA DE AUTO-PREENCHIMENTO FINANCEIRO
+  useEffect(() => {
+    // Só recalculamos se o serviço mudar e se ainda não foi pago (para não estragar histórico)
+    if (isPaid && !initialData?.isPaid && formData.serviceId) {
+      const selectedService = services.find(s => s.id === formData.serviceId);
+      if (selectedService) {
+        const basePrice = parsePrice(selectedService.price);
+        const discountValue = parseFloat(discount.replace(',', '.')) || 0;
+        const finalPrice = Math.max(0, basePrice - discountValue);
+        setPaidAmount(finalPrice.toFixed(2));
+      }
+    }
+  }, [formData.serviceId, isPaid, discount, services, initialData]);
 
   if (!isOpen) return null;
 
@@ -93,12 +116,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
       return;
     }
 
-    // Validação de Caixa se estiver a marcar como pago agora
     let activeSessionId = '';
     if (isPaid && !initialData?.isPaid) {
       const session = await getOpenCashSession();
       if (!session) {
-        alert("Não é possível marcar como pago: O CAIXA ESTÁ FECHADO. Abra o caixa na aba 'Caixa' antes de prosseguir.");
+        alert("Caixa Fechado! Abra o caixa antes de marcar como pago.");
         setLoading(false);
         return;
       }
@@ -111,7 +133,8 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
       const endInMinutes = startInMinutes + selectedService.duration;
       const endTime = `${Math.floor(endInMinutes / 60).toString().padStart(2, '0')}:${(endInMinutes % 60).toString().padStart(2, '0')}`;
 
-      const amountToRegister = parseFloat(paidAmount.replace(',', '.')) || 0;
+      const finalPaidAmount = parseFloat(paidAmount.replace(',', '.')) || 0;
+      const finalDiscount = parseFloat(discount.replace(',', '.')) || 0;
 
       const appointmentData: any = {
         clientName: formData.clientName,
@@ -124,13 +147,14 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         endTime: endTime,
         isPaid,
         paymentMethod: isPaid ? paymentMethod : null,
-        paidAmount: isPaid ? amountToRegister : 0,
+        paidAmount: isPaid ? finalPaidAmount : 0,
+        discount: isPaid ? finalDiscount : 0,
+        basePriceSnapshot: parsePrice(selectedService.price),
         updatedAt: serverTimestamp()
       };
 
       let finalApptId = initialData?.id;
 
-      // 1. Gravar/Atualizar Agendamento
       if (initialData?.id) {
         const docRef = doc(db, "businesses", CLIENT_ID, "appointments", initialData.id);
         await updateDoc(docRef, appointmentData);
@@ -142,13 +166,12 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         finalApptId = docRef.id;
       }
 
-      // 2. Registar no Caixa se for um NOVO pagamento
       if (isPaid && !initialData?.isPaid && activeSessionId && user) {
         const entryId = await addCashEntry({
           businessId: CLIENT_ID,
           sessionId: activeSessionId,
           type: EntryType.AppointmentIncome,
-          amount: amountToRegister,
+          amount: finalPaidAmount,
           paymentMethod: paymentMethod,
           origin: EntryOrigin.Appointment,
           description: `Serviço: ${selectedService.name} - Cliente: ${formData.clientName}`,
@@ -156,7 +179,6 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
           createdBy: user.uid
         });
 
-        // Vincular a entrada ao agendamento
         const apptDoc = doc(db, "businesses", CLIENT_ID, "appointments", finalApptId!);
         await updateDoc(apptDoc, { cashEntryId: entryId });
       }
@@ -193,7 +215,6 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
       <div className="relative bg-brand-card w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 z-[210]">
         
-        {/* Header */}
         <div className="p-6 border-b border-stone-100 bg-brand-card flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className={`w-12 h-12 ${initialData ? 'bg-primary' : 'bg-primary-dark'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
@@ -204,7 +225,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
                 {initialData ? 'Detalhes da Marcação' : 'Nova Marcação Manual'}
               </h2>
               <p className="text-primary text-[10px] font-black uppercase tracking-widest mt-0.5">
-                {initialData?.isPaid ? 'SERVIÇO PAGO' : 'Painel de Gestão'}
+                {isPaid ? 'ATENDIMENTO FINALIZADO' : 'Painel de Gestão'}
               </p>
             </div>
           </div>
@@ -214,16 +235,14 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         </div>
 
         <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6 bg-brand-card max-h-[80vh] overflow-y-auto scrollbar-thin">
-          {/* Dados do Cliente */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-                <User size={12} className="text-primary" /> {COPY.bookingModal.placeholders.name}
+                <User size={12} className="text-primary" /> Nome do Cliente
               </label>
               <input 
                 required
                 type="text"
-                placeholder="Ex: Maria Silva"
                 className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary transition-all font-medium"
                 value={formData.clientName}
                 onChange={e => setFormData({...formData, clientName: e.target.value})}
@@ -232,12 +251,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-                <Phone size={12} className="text-primary" /> {COPY.bookingModal.placeholders.phone}
+                <Phone size={12} className="text-primary" /> Telemóvel
               </label>
               <input 
                 required
                 type="tel"
-                placeholder="9xx xxx xxx"
                 className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary transition-all font-medium"
                 value={formData.clientPhone}
                 onChange={e => setFormData({...formData, clientPhone: e.target.value})}
@@ -245,11 +263,10 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          {/* Seleção de Serviço */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center mb-1">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-                <Scissors size={12} className="text-primary" /> {COPY.admin.dashboard.tabs.services}
+                <Scissors size={12} className="text-primary" /> Serviço Selecionado
               </label>
               <div className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: currentServiceColor }} />
             </div>
@@ -259,14 +276,13 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
               value={formData.serviceId}
               onChange={e => setFormData({...formData, serviceId: e.target.value})}
             >
-              <option value="">Selecione um serviço...</option>
+              <option value="">Selecione...</option>
               {services.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.duration} min)</option>
+                <option key={s.id} value={s.id}>{s.name} ({s.price})</option>
               ))}
             </select>
           </div>
 
-          {/* Data e Hora */}
           <div className="grid grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
@@ -296,22 +312,22 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          {/* SECÇÃO DE PAGAMENTO (Fase 2) */}
+          {/* SECÇÃO FINANCEIRA AUTOMATIZADA */}
           <div className="pt-4 border-t border-stone-100 space-y-4">
-             <div className="flex items-center justify-between bg-stone-50 p-4 rounded-2xl border border-stone-100">
+             <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isPaid ? 'bg-green-50 border-green-100' : 'bg-stone-50 border-stone-100'}`}>
                 <div className="flex items-center gap-3">
                    <div className={`p-2 rounded-lg ${isPaid ? 'bg-green-100 text-green-600' : 'bg-stone-200 text-stone-500'}`}>
                       <CheckCircle2 size={18} />
                    </div>
                    <div>
-                      <p className="text-xs font-black text-primary-dark uppercase">Serviço Pago?</p>
-                      <p className="text-[10px] text-stone-400 uppercase">Registar no Caixa</p>
+                      <p className="text-xs font-black text-primary-dark uppercase">Concluir Atendimento</p>
+                      <p className="text-[10px] text-stone-400 uppercase">Registar entrada no caixa</p>
                    </div>
                 </div>
                 <input 
                   type="checkbox"
                   checked={isPaid}
-                  disabled={initialData?.isPaid} // Não permite desmarcar se já foi processado no caixa
+                  disabled={initialData?.isPaid}
                   onChange={(e) => setIsPaid(e.target.checked)}
                   className="w-6 h-6 accent-green-600 cursor-pointer"
                 />
@@ -319,44 +335,59 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
              {isPaid && (
                <div className="space-y-4 animate-in slide-in-from-top-2">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     {/* MÉTODO */}
                      <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2">
                            <CreditCard size={12} className="text-primary" /> Método
                         </label>
                         <select 
                           value={paymentMethod}
+                          disabled={initialData?.isPaid}
                           onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                          className="w-full bg-stone-50 border border-stone-100 rounded-xl p-3 text-sm font-bold text-primary-dark outline-none focus:border-primary"
+                          className="w-full bg-stone-50 border border-stone-100 rounded-xl p-3 text-sm font-bold text-primary-dark outline-none focus:border-primary appearance-none"
                         >
                            {Object.values(PaymentMethod).map(m => (
                              <option key={m} value={m}>{(COPY.admin.cash.methods as any)[m] || m}</option>
                            ))}
                         </select>
                      </div>
+
+                     {/* DESCONTO */}
                      <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2">
-                           <Banknote size={12} className="text-primary" /> Valor Cobrado
+                           <Tag size={12} className="text-primary" /> Desconto (€)
                         </label>
                         <input 
                           type="text"
-                          placeholder="0,00€"
-                          value={paidAmount}
-                          onChange={(e) => setPaidAmount(e.target.value)}
-                          className="w-full bg-stone-50 border border-stone-100 rounded-xl p-3 text-sm font-black text-primary-dark outline-none focus:border-primary"
+                          inputMode="decimal"
+                          disabled={initialData?.isPaid}
+                          value={discount}
+                          onChange={(e) => setDiscount(e.target.value)}
+                          className="w-full bg-stone-50 border border-stone-100 rounded-xl p-3 text-sm font-bold text-primary-dark outline-none focus:border-primary"
                         />
                      </div>
+
+                     {/* VALOR FINAL (AUTO-CALCULADO) */}
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2">
+                           <Banknote size={12} className="text-primary" /> Valor a Pagar
+                        </label>
+                        <div className="w-full bg-primary/5 border border-primary/20 rounded-xl p-3 text-sm font-black text-primary-dark flex items-center justify-center">
+                           {paidAmount}€
+                        </div>
+                     </div>
                   </div>
+                  
                   {initialData?.isPaid && (
                     <p className="text-[9px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg text-center uppercase tracking-tighter">
-                      Este pagamento já foi processado no caixa e não pode ser alterado aqui.
+                      Pagamento já processado. Use a aba "Caixa" para estornos ou ajustes.
                     </p>
                   )}
                </div>
              )}
           </div>
 
-          {/* Botões de Ação */}
           <div className="flex gap-4 pt-2">
             {initialData && (
               <button 
@@ -375,7 +406,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
               className="flex-1 py-4 bg-primary hover:bg-primary-hover text-white font-black rounded-xl shadow-xl transition-all flex justify-center items-center gap-2 active:scale-[0.98] uppercase tracking-widest text-xs"
             >
               {loading ? <Loader2 className="animate-spin" /> : (
-                <><Save size={18} /> {initialData ? 'Atualizar Marcação' : 'Confirmar Agenda'}</>
+                <><Save size={18} /> {initialData ? 'Atualizar e Guardar' : 'Confirmar Agenda'}</>
               )}
             </button>
           </div>
