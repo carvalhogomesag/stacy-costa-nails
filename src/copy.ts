@@ -186,7 +186,6 @@ export const COPY = {
         }
       },
 
-      // --- NOVO: MODAL DE EDIÇÃO COM AUDITORIA ---
       editModal: {
         title: "Retificar Lançamento",
         labelOriginal: "Valor Original",
@@ -209,7 +208,7 @@ export const COPY = {
         title: "Movimentos da Sessão",
         empty: "Nenhum movimento registado nesta sessão.",
         deleteConfirm: "Eliminar este lançamento financeiro?",
-        editedTag: "Editado" // Etiqueta visual para itens alterados
+        editedTag: "Editado"
       },
 
       history: {
@@ -218,6 +217,8 @@ export const COPY = {
         exportCsv: "Exportar para CSV (Excel)",
         exportPdf: "Gerar Relatório PDF",
         empty: "Nenhum histórico encontrado para este período.",
+        btnBack: "Voltar à Lista", // NOVO
+        editModeNotice: "Modo de Auditoria Ativo", // NOVO
         ranges: {
           last7: "Últimos 7 dias",
           last30: "Últimos 30 dias",
