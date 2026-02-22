@@ -6,17 +6,17 @@ import {
   Zap, 
   BarChart3, 
   Plus, 
-  Search, 
-  Filter,
   UserPlus
 } from 'lucide-react';
 import { COPY } from '../../../copy';
 import { Customer } from '../../../types';
 
-// Sub-componentes (Vamos criá-los nos próximos passos)
+// Sub-componentes
 import CustomerList from './CustomerList';
 import CustomerProfile from './CustomerProfile';
 import CustomerFormModal from './CustomerFormModal';
+import CrmInsights from './CrmInsights';
+import CrmTasks from './CrmTasks'; // NOVO: Importação do módulo de tarefas
 
 const CustomerDashboard: React.FC = () => {
   // --- ESTADOS DE NAVEGAÇÃO CRM ---
@@ -28,13 +28,13 @@ const CustomerDashboard: React.FC = () => {
   // Controlo de Modais
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
 
-  // Mapeamento de itens do menu CRM
+  // Mapeamento de itens do menu CRM usando COPY
   const crmMenuItems = [
     { id: 'customers', label: COPY.admin.crm.tabs.customers, icon: <Users size={18} /> },
-    { id: 'leads', label: COPY.admin.crm.tabs.leads, icon: <Target size={18} /> },
     { id: 'tasks', label: COPY.admin.crm.tabs.tasks, icon: <CheckSquare size={18} /> },
-    { id: 'automations', label: COPY.admin.crm.tabs.automations, icon: <Zap size={18} /> },
     { id: 'insights', label: COPY.admin.crm.tabs.insights, icon: <BarChart3 size={18} /> },
+    { id: 'leads', label: COPY.admin.crm.tabs.leads, icon: <Target size={18} /> },
+    { id: 'automations', label: COPY.admin.crm.tabs.automations, icon: <Zap size={18} /> },
   ];
 
   // Handler para quando um cliente é selecionado na lista
@@ -65,7 +65,7 @@ const CustomerDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* SUB-NAVEGAÇÃO CRM (Abas) */}
+      {/* SUB-NAVEGAÇÃO CRM (Abas estilo Pilulado) */}
       {!selectedCustomerId && (
         <div className="flex bg-stone-100 p-1 rounded-2xl overflow-x-auto no-scrollbar border border-stone-200">
           <div className="flex gap-1">
@@ -76,7 +76,7 @@ const CustomerDashboard: React.FC = () => {
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest shrink-0 ${
                   activeTab === item.id 
                   ? 'bg-white text-primary shadow-sm' 
-                  : 'text-stone-400 hover:text-stone-600'
+                  : 'text-stone-400 hover:text-stone-800'
                 }`}
               >
                 {item.icon}
@@ -96,23 +96,34 @@ const CustomerDashboard: React.FC = () => {
             onBack={() => setSelectedCustomerId(null)} 
           />
         ) : (
-          /* VISÕES GERAIS */
+          /* NAVEGAÇÃO ENTRE MÓDULOS ATIVOS */
           <>
             {activeTab === 'customers' && (
               <CustomerList onSelectCustomer={handleSelectCustomer} />
             )}
             
+            {activeTab === 'tasks' && (
+              <CrmTasks />
+            )}
+            
+            {activeTab === 'insights' && (
+              <CrmInsights />
+            )}
+
+            {/* PLACEHOLDERS PARA PRÓXIMAS FASES (3 e 4) */}
             {activeTab === 'leads' && (
-              <div className="bg-brand-card border border-stone-200 border-dashed rounded-[2rem] p-20 text-center">
+              <div className="bg-brand-card border border-stone-200 border-dashed rounded-[2rem] p-20 text-center animate-in zoom-in-95">
                  <Target className="mx-auto text-stone-200 mb-4" size={48} />
-                 <p className="text-stone-400 italic">Módulo de Leads em preparação para a Fase 4.</p>
+                 <h4 className="text-stone-400 font-bold uppercase tracking-widest text-xs">Gestão de Leads</h4>
+                 <p className="text-stone-400 text-sm mt-2 font-light">Este módulo será ativado na Fase 4 (Pipeline Comercial).</p>
               </div>
             )}
 
-            {/* Outras abas seguem o mesmo padrão de placeholder para as próximas fases */}
-            {['tasks', 'automations', 'insights'].includes(activeTab) && (
-              <div className="bg-brand-card border border-stone-200 border-dashed rounded-[2rem] p-20 text-center">
-                 <p className="text-stone-400 italic font-light">Este recurso será ativado nas próximas fases da implementação do CRM.</p>
+            {activeTab === 'automations' && (
+              <div className="bg-brand-card border border-stone-200 border-dashed rounded-[2rem] p-20 text-center animate-in zoom-in-95">
+                 <Zap className="mx-auto text-stone-200 mb-4" size={48} />
+                 <h4 className="text-stone-400 font-bold uppercase tracking-widest text-xs">Workflows Automáticos</h4>
+                 <p className="text-stone-400 text-sm mt-2 font-light">Automações de marketing e retorno agendadas para a Fase 3.</p>
               </div>
             )}
           </>

@@ -30,7 +30,7 @@ export interface Appointment {
   createdAt: any;
   
   // --- INTEGRAÇÃO CRM (FASE 1) ---
-  customerId?: string;            // Vínculo com a entidade cliente centralizada
+  customerId?: string;            
 
   // --- CAMPOS PARA INTEGRAÇÃO COM CAIXA ---
   isPaid?: boolean;               
@@ -41,8 +41,6 @@ export interface Appointment {
   cashEntryId?: string;           
   updatedAt?: any;
 }
-
-// ... (WorkConfig, TimeBlock, SocialLinks, GalleryImage, BusinessProfile inalterados)
 
 export interface WorkConfig {
   id?: string;
@@ -180,7 +178,7 @@ export interface CashSummary {
   totalByMethod: Record<PaymentMethod, number>;
 }
 
-// --- NOVO: MÓDULO CRM (FASE 1) ---
+// --- MÓDULO CRM ---
 
 export enum CustomerTag {
   VIP = 'VIP',
@@ -207,43 +205,66 @@ export interface CustomerTimelineEvent {
   type: CrmEventType;
   title: string;
   description: string;
-  amount?: number;           // Se houver valor financeiro no evento
-  relatedId?: string;        // ID do agendamento ou transação de caixa
-  createdAt: any;            // Timestamp
-  createdBy: string;         // Admin ID
+  amount?: number;           
+  relatedId?: string;        
+  createdAt: any;            
+  createdBy: string;         
 }
 
 export interface Customer {
   id?: string;
   name: string;
-  phone: string;             // Chave única de deduplicação
+  phone: string;             
   whatsapp: string;
   email?: string;
-  birthday?: string;         // DD/MM
+  birthday?: string;         
   gender?: string;
   notes?: string;
   tags: CustomerTag[];
-  
-  // Consentimento LGPD
   marketingConsent: boolean;
   consentDate?: any;
-
-  // Estatísticas (Desnormalizadas para performance de segmentação)
   stats: {
-    totalSpent: number;      // LTV (Lifetime Value)
+    totalSpent: number;      
     appointmentsCount: number;
-    lastVisitDate?: string;  // YYYY-MM-DD
+    lastVisitDate?: string;  
     averageTicket: number;
     noShowCount: number;
   };
-
-  // Preferências
   preferences: {
-    favoriteServices: string[]; // IDs dos serviços
+    favoriteServices: string[]; 
     preferredStaff?: string;
-    preferredTimeSlot?: string; // Ex: "Manhã", "Tarde"
+    preferredTimeSlot?: string; 
   };
+  createdAt: any;
+  createdBy: string;
+  updatedAt?: any;
+}
 
+// --- NOVO: MÓDULO DE TAREFAS CRM (FASE 2) ---
+
+export enum CrmTaskStatus {
+  Pending = 'PENDENTE',
+  InProgress = 'EM_CURSO',
+  Completed = 'CONCLUIDA',
+  Canceled = 'CANCELADA'
+}
+
+export enum CrmTaskPriority {
+  Low = 'BAIXA',
+  Medium = 'MEDIA',
+  High = 'ALTA'
+}
+
+export interface CrmTask {
+  id?: string;
+  businessId: string;
+  customerId?: string;       // Vínculo opcional com cliente
+  title: string;             // Ex: "Ligar para confirmar retorno"
+  description: string;
+  dueDate: string;           // YYYY-MM-DD
+  priority: CrmTaskPriority;
+  status: CrmTaskStatus;
+  assignedTo: string;        // ID do utilizador/colaborador
   createdAt: any;
   createdBy: string;
   updatedAt?: any;
