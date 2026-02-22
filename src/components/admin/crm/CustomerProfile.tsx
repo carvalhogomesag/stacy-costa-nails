@@ -16,10 +16,15 @@ import {
   Zap,
   CheckCircle2,
   XCircle,
-  Edit3
+  Edit3,
+  Trash2,
+  UserX,
+  ShieldCheck,
+  ShieldAlert // Substituído aqui
 } from 'lucide-react';
 import { db } from '../../../firebase';
 import { doc, collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { anonymizeCustomerData } from '../../../services/crmService';
 import { CLIENT_ID } from '../../../constants';
 import { COPY } from '../../../copy';
 import { Customer, CustomerTimelineEvent, CrmEventType } from '../../../types';
@@ -31,16 +36,15 @@ interface CustomerProfileProps {
 }
 
 const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack }) => {
-  const [activeTab, setActiveTab] = useState<'timeline' | 'info' | 'finance' | 'prefs'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'info' | 'finance' | 'prefs' | 'privacy'>('timeline');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [timeline, setTimeline] = useState<CustomerTimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  // 1. Escutar Dados do Cliente e Timeline (Realtime)
   useEffect(() => {
     setLoading(true);
     
-    // Doc do Cliente
     const customerRef = doc(db, "businesses", CLIENT_ID, "customers", customerId);
     const unsubCustomer = onSnapshot(customerRef, (snap) => {
       if (snap.exists()) {
@@ -49,7 +53,6 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
       setLoading(false);
     });
 
-    // Eventos da Timeline
     const eventsRef = collection(db, "businesses", CLIENT_ID, "crmEvents");
     const q = query(
       eventsRef, 
@@ -63,7 +66,21 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
     return () => { unsubCustomer(); unsubTimeline(); };
   }, [customerId]);
 
-  // Helper para ícones da Timeline
+  const handleAnonymize = async () => {
+    if (!window.confirm(COPY.admin.crm.profile.privacy.deleteConfirm)) return;
+
+    setActionLoading(true);
+    try {
+      await anonymizeCustomerData(customerId);
+      alert(COPY.admin.crm.profile.privacy.success);
+      onBack();
+    } catch (error) {
+      alert("Erro ao processar pedido de privacidade.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getEventIcon = (type: CrmEventType) => {
     switch (type) {
       case CrmEventType.AppointmentCreated: return <Calendar className="text-blue-500" size={16} />;
@@ -88,7 +105,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
   if (!customer) return <div className="p-10 text-center text-red-500">Cliente não encontrado.</div>;
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
+    <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-10">
       
       {/* CABEÇALHO DO PERFIL */}
       <div className="flex items-center gap-4">
@@ -112,7 +129,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
         </div>
       </div>
 
-      {/* PAINEL DE ESTATÍSTICAS RÁPIDAS */}
+      {/* ESTATÍSTICAS RÁPIDAS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: COPY.admin.crm.profile.stats.ltv, value: formatCurrency(customer.stats.totalSpent), icon: TrendingUp, color: 'text-emerald-600' },
@@ -131,21 +148,27 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
       </div>
 
       {/* ABAS INTERNAS */}
-      <div className="flex bg-stone-100 p-1 rounded-2xl w-full border border-stone-200">
-        {(Object.entries(COPY.admin.crm.profile.tabs) as [keyof typeof COPY.admin.crm.profile.tabs, string][]).map(([id, label]) => (
+      <div className="flex bg-stone-100 p-1 rounded-2xl w-full border border-stone-200 overflow-x-auto no-scrollbar">
+        {[
+          { id: 'timeline', label: COPY.admin.crm.profile.tabs.timeline },
+          { id: 'info', label: COPY.admin.crm.profile.tabs.info },
+          { id: 'finance', label: COPY.admin.crm.profile.tabs.finance },
+          { id: 'prefs', label: COPY.admin.crm.profile.tabs.prefs },
+          { id: 'privacy', label: 'Privacidade' }
+        ].map((tab) => (
           <button
-            key={id}
-            onClick={() => setActiveTab(id as any)}
-            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest ${
-              activeTab === id ? 'bg-white text-primary shadow-sm' : 'text-stone-400'
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex-1 min-w-[80px] py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest ${
+              activeTab === tab.id ? 'bg-white text-primary shadow-sm' : 'text-stone-400'
             }`}
           >
-            {label}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* CONTEÚDO DAS ABAS */}
+      {/* CONTEÚDO DINÂMICO */}
       <div className="min-h-[300px]">
         {activeTab === 'timeline' && (
           <div className="space-y-6 relative before:absolute before:left-6 before:top-4 before:bottom-4 before:w-0.5 before:bg-stone-100">
@@ -156,11 +179,9 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
             ) : (
               timeline.map((event) => (
                 <div key={event.id} className="relative pl-14 group">
-                  {/* Ponto na Linha */}
                   <div className="absolute left-4 top-1 w-5 h-5 bg-white border-2 border-stone-100 rounded-full flex items-center justify-center z-10 group-hover:border-primary transition-colors">
                     {getEventIcon(event.type)}
                   </div>
-                  
                   <div className="bg-brand-card border border-stone-100 p-4 rounded-2xl shadow-sm group-hover:border-primary/20 transition-all">
                     <div className="flex justify-between items-start mb-1">
                       <h4 className="text-xs font-black text-primary-dark uppercase tracking-tight">
@@ -171,11 +192,6 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
                       </span>
                     </div>
                     <p className="text-xs text-stone-500 leading-relaxed">{event.description}</p>
-                    {event.amount && (
-                      <p className="mt-2 text-xs font-black text-emerald-600">
-                        {formatCurrency(event.amount)}
-                      </p>
-                    )}
                   </div>
                 </div>
               ))
@@ -184,7 +200,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
         )}
 
         {activeTab === 'info' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
              <div className="bg-brand-card border border-stone-100 p-6 rounded-[2rem] space-y-4">
                 <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4">Dados de Contacto</h4>
                 <div className="flex items-center gap-3 text-sm text-stone-600">
@@ -209,10 +225,61 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId, onBack })
           </div>
         )}
 
-        {/* Placeholders para Finanças e Preferências - Fase 2 */}
+        {/* SEÇÃO DE PRIVACIDADE */}
+        {activeTab === 'privacy' && (
+          <div className="space-y-6 animate-in fade-in">
+             <div className="bg-white border border-stone-100 p-8 rounded-[2.5rem] shadow-sm space-y-6">
+                <div className="flex items-center gap-4 text-primary-dark">
+                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shadow-inner">
+                      <ShieldCheck size={24} />
+                   </div>
+                   <div>
+                      <h4 className="font-bold text-lg">{COPY.admin.crm.profile.privacy.title}</h4>
+                      <p className="text-xs text-stone-400">Gestão de consentimento e proteção de dados pessoais.</p>
+                   </div>
+                </div>
+
+                <div className="p-6 bg-stone-50 rounded-2xl border border-stone-100">
+                   <h5 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Estado do Consentimento</h5>
+                   <div className="flex items-center gap-3">
+                      {customer.marketingConsent ? (
+                        <div className="flex items-center gap-2 text-green-600 font-bold text-sm">
+                           <CheckCircle2 size={18} /> Autoriza comunicações de marketing
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-stone-400 font-bold text-sm">
+                           <XCircle size={18} /> Não autoriza comunicações de marketing
+                        </div>
+                      )}
+                   </div>
+                </div>
+
+                <div className="pt-6 border-t border-stone-100 space-y-4">
+                   <h5 className="text-[10px] font-black text-red-400 uppercase tracking-widest ml-1">Zona de Risco</h5>
+                   <div className="p-6 bg-red-50/50 border border-red-100 rounded-3xl space-y-4">
+                      <div className="flex gap-4 items-start">
+                         <ShieldAlert className="text-red-500 shrink-0 mt-1" size={20} />
+                         <div className="text-xs text-red-800 leading-relaxed">
+                            A anonimização removerá o nome, telefone, email e notas deste cliente. 
+                            <strong> Esta ação é irreversível</strong> e é utilizada para cumprir a LGPD.
+                         </div>
+                      </div>
+                      <button 
+                        onClick={handleAnonymize}
+                        disabled={actionLoading}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                      >
+                        {actionLoading ? <Loader2 className="animate-spin" /> : <><UserX size={18} /> {COPY.admin.crm.profile.privacy.btnDelete}</>}
+                      </button>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+
         {['finance', 'prefs'].includes(activeTab) && (
           <div className="bg-brand-card border border-stone-100 p-12 rounded-[2rem] text-center text-stone-400 italic">
-             Módulo em desenvolvimento para a próxima etapa da Fase 2.
+             Módulo em desenvolvimento para as métricas avançadas da Fase 4.
           </div>
         )}
       </div>

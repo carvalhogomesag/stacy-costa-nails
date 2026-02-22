@@ -196,7 +196,9 @@ export enum CrmEventType {
   PaymentReceived = 'PAYMENT_RECEIVED',
   NoteAdded = 'NOTE_ADDED',
   CampaignSent = 'CAMPAIGN_SENT',
-  ManualEdit = 'MANUAL_EDIT'
+  ManualEdit = 'MANUAL_EDIT',
+  LeadCreated = 'LEAD_CREATED',      // NOVO: Fase 4
+  LeadConverted = 'LEAD_CONVERTED'   // NOVO: Fase 4
 }
 
 export interface CustomerTimelineEvent {
@@ -281,7 +283,7 @@ export enum CrmChannel {
 export enum CrmAutomationTrigger {
   AfterService = 'POST_SERVICE',       
   Birthday = 'BIRTHDAY',              
-  InactiveRetention = 'INACTIVE_RETENTION', // CORRIGIDO: Sem espaços
+  InactiveRetention = 'INACTIVE_RETENTION', 
   NoShow = 'NOSHOW_RECOVERY'          
 }
 
@@ -333,4 +335,42 @@ export interface CrmAutomationRun {
   executionDate: string;               
   status: 'SUCCESS' | 'FAILED';
   createdAt: any;
+}
+
+// --- NOVO: MÓDULO DE LEADS E PIPELINE (FASE 4) ---
+
+export enum LeadSource {
+  Instagram = 'INSTAGRAM',
+  Facebook = 'FACEBOOK',
+  Indication = 'INDICACAO',
+  Ads = 'TRAFEGO_PAGO',
+  Organic = 'ORGANICO',
+  WalkIn = 'PASSAGEM',
+  Other = 'OUTRO'
+}
+
+export enum LeadStage {
+  New = 'NOVO',               // Lead acabou de chegar
+  Contacted = 'CONTACTADO',   // Primeira abordagem feita
+  Interested = 'INTERESSADO', // Demonstrou interesse real
+  Scheduled = 'AGENDADO',     // Marcou a primeira visita
+  Converted = 'CONVERTIDO',   // Compareceu e virou cliente oficial
+  Lost = 'PERDIDO'            // Desistiu ou não respondeu
+}
+
+export interface Lead {
+  id?: string;
+  businessId: string;
+  name: string;
+  phone: string;
+  whatsapp: string;
+  source: LeadSource;
+  stage: LeadStage;
+  potentialValue?: number;    // Valor estimado do serviço pretendido
+  probability: number;        // 0 a 100
+  notes?: string;
+  customerId?: string;        // ID do cliente após conversão
+  createdAt: any;
+  createdBy: string;
+  updatedAt?: any;
 }

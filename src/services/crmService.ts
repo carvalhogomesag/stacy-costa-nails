@@ -24,7 +24,9 @@ import {
   CrmEventType, 
   CustomerTag,
   CrmTask,
-  CrmTaskStatus
+  CrmTaskStatus,
+  Lead,
+  LeadStage
 } from '../types';
 
 /**
@@ -32,7 +34,8 @@ import {
  */
 const customersRef = collection(db, "businesses", CLIENT_ID, "customers");
 const eventsRef = collection(db, "businesses", CLIENT_ID, "crmEvents");
-const tasksRef = collection(db, "businesses", CLIENT_ID, "crmTasks"); // NOVO
+const tasksRef = collection(db, "businesses", CLIENT_ID, "crmTasks");
+const leadsRef = collection(db, "businesses", CLIENT_ID, "leads"); // NOVO: Fase 4
 
 /**
  * 1. Pesquisa cliente por telemóvel (Deduplicação)
@@ -196,47 +199,18 @@ export const getCRMGlobalStats = async () => {
 };
 
 /**
- * 8. Inteligência: Filtrar Clientes por Segmento Estratégico
+ * 8. GESTÃO DE TAREFAS CRM
  */
-export const getCustomersBySegment = async (segment: 'VIP' | 'RISK' | 'BIRTHDAY_MONTH') => {
-  const snap = await getDocs(customersRef);
-  const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer));
-
-  const now = new Date();
-  const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
-
-  switch (segment) {
-    case 'VIP':
-      return all.filter(c => c.tags.includes(CustomerTag.VIP) || c.stats.totalSpent > 500);
-    case 'RISK':
-      const fortyFiveDaysAgo = new Date();
-      fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
-      const limitStr = fortyFiveDaysAgo.toISOString().split('T')[0];
-      return all.filter(c => c.stats.lastVisitDate && c.stats.lastVisitDate < limitStr);
-    case 'BIRTHDAY_MONTH':
-      return all.filter(c => c.birthday && c.birthday.split('/')[1] === currentMonth);
-    default:
-      return all;
-  }
-};
-
-/**
- * 9. NOVO: GESTÃO DE TAREFAS CRM
- */
-
-// Criar nova tarefa
 export const createCrmTask = async (task: Omit<CrmTask, 'id' | 'createdAt' | 'businessId'>): Promise<string> => {
-  const newTask = {
+  const docRef = await addDoc(tasksRef, {
     ...task,
     businessId: CLIENT_ID,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
-  };
-  const docRef = await addDoc(tasksRef, newTask);
+  });
   return docRef.id;
 };
 
-// Obter tarefas por status
 export const getCrmTasks = async (status?: CrmTaskStatus): Promise<CrmTask[]> => {
   let q = query(tasksRef, orderBy("dueDate", "asc"));
   if (status) {
@@ -246,26 +220,83 @@ export const getCrmTasks = async (status?: CrmTaskStatus): Promise<CrmTask[]> =>
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as CrmTask));
 };
 
-// Obter tarefas vinculadas a um cliente específico
-export const getCustomerTasks = async (customerId: string): Promise<CrmTask[]> => {
-  const q = query(tasksRef, where("customerId", "==", customerId), orderBy("dueDate", "asc"));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as CrmTask));
-};
-
-// Atualizar status ou dados da tarefa
 export const updateCrmTask = async (taskId: string, updates: Partial<CrmTask>): Promise<void> => {
   const taskDoc = doc(db, "businesses", CLIENT_ID, "crmTasks", taskId);
-  await updateDoc(taskDoc, {
-    ...updates,
-    updatedAt: serverTimestamp()
-  });
+  await updateDoc(taskDoc, { ...updates, updatedAt: serverTimestamp() });
 };
 
-// Eliminar tarefa
 export const deleteCrmTask = async (taskId: string): Promise<void> => {
-  const taskDoc = doc(db, "businesses", CLIENT_ID, "crmTasks", taskId);
-  await deleteDoc(taskDoc);
+  await deleteDoc(doc(db, "businesses", CLIENT_ID, "crmTasks", taskId));
+};
+
+/**
+ * 9. NOVO: GESTÃO DE LEADS E PIPELINE (FASE 4)
+ */
+
+// Criar novo Lead
+export const createLead = async (lead: Omit<Lead, 'id' | 'createdAt' | 'businessId'>): Promise<string> => {
+  const docRef = await addDoc(leadsRef, {
+    ...lead,
+    businessId: CLIENT_ID,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  // Registar o evento de entrada do lead na timeline (se já existir vínculo futuro)
+  return docRef.id;
+};
+
+// Obter Leads por Estágio (para o Kanban)
+export const getLeads = async (stage?: LeadStage): Promise<Lead[]> => {
+  let q = query(leadsRef, orderBy("createdAt", "desc"));
+  if (stage) {
+    q = query(leadsRef, where("stage", "==", stage), orderBy("createdAt", "desc"));
+  }
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Lead));
+};
+
+// Atualizar Lead
+export const updateLead = async (leadId: string, updates: Partial<Lead>): Promise<void> => {
+  const leadDoc = doc(db, "businesses", CLIENT_ID, "leads", leadId);
+  await updateDoc(leadDoc, { ...updates, updatedAt: serverTimestamp() });
+};
+
+/**
+ * CONVERSÃO: Transforma Lead em Cliente Real
+ */
+export const convertLeadToCustomer = async (leadId: string, adminId: string): Promise<string> => {
+  const leadDoc = doc(db, "businesses", CLIENT_ID, "leads", leadId);
+  const leadSnap = await getDoc(leadDoc);
+
+  if (!leadSnap.exists()) throw new Error("Lead não encontrado.");
+  const leadData = leadSnap.data() as Lead;
+
+  // 1. Criar ou Vincular ao Cliente
+  const customerId = await upsertCustomer({
+    name: leadData.name,
+    phone: leadData.phone,
+    whatsapp: leadData.whatsapp,
+    notes: `Convertido de Lead. Origem: ${leadData.source}. Notas originais: ${leadData.notes || ''}`
+  }, adminId);
+
+  // 2. Atualizar o Lead para Convertido
+  await updateDoc(leadDoc, {
+    stage: LeadStage.Converted,
+    customerId: customerId,
+    updatedAt: serverTimestamp()
+  });
+
+  // 3. Registar eventos na Timeline do Cliente
+  await recordCrmEvent({
+    customerId,
+    type: CrmEventType.LeadConverted,
+    title: "Lead Convertido",
+    description: `Este cliente veio através de uma oportunidade do pipeline (${leadData.source}).`,
+    createdBy: adminId
+  });
+
+  return customerId;
 };
 
 /**
@@ -278,19 +309,29 @@ export const getAllCustomers = async (): Promise<Customer[]> => {
 };
 
 /**
- * 11. Eliminar Cliente (LGPD)
+ * 11. ANONIMIZAÇÃO (LGPD) - REFORÇADO PARA FASE 4
  */
-export const deleteCustomerData = async (customerId: string): Promise<void> => {
-  const eventsQ = query(eventsRef, where("customerId", "==", customerId));
-  const eventsSnap = await getDocs(eventsQ);
-  eventsSnap.forEach(async (d) => await setDoc(d.ref, {})); 
-
-  await updateDoc(doc(db, "businesses", CLIENT_ID, "customers", customerId), {
-    name: "CLIENTE_REMOVIDO_LGPD",
+export const anonymizeCustomerData = async (customerId: string): Promise<void> => {
+  const customerDoc = doc(db, "businesses", CLIENT_ID, "customers", customerId);
+  
+  // Limpar PII (Personally Identifiable Information) mas manter histórico para estatísticas do salão
+  await updateDoc(customerDoc, {
+    name: "CLIENTE_ANONIMO_LGPD",
     phone: "000000000",
     whatsapp: "000000000",
-    email: "",
-    isInactive: true,
+    email: "anonimo@removido.com",
+    birthday: "",
+    notes: "Dados removidos a pedido do titular (Direito ao Esquecimento - LGPD).",
+    marketingConsent: false,
     updatedAt: serverTimestamp()
+  });
+
+  // Registar a ação de anonimização na Timeline antes de qualquer outra coisa
+  await recordCrmEvent({
+    customerId,
+    type: CrmEventType.ManualEdit,
+    title: "Anonimização LGPD",
+    description: "Os dados pessoais deste cliente foram removidos permanentemente.",
+    createdBy: "SISTEMA_PRIVACIDADE"
   });
 };

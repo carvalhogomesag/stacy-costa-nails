@@ -297,8 +297,16 @@ export const COPY = {
             PAYMENT_RECEIVED: "Pagamento Registado",
             NOTE_ADDED: "Nota Interna",
             CAMPAIGN_SENT: "Campanha Enviada",
-            MANUAL_EDIT: "Dados Retificados"
+            MANUAL_EDIT: "Dados Retificados",
+            LEAD_CREATED: "Lead Registado",
+            LEAD_CONVERTED: "Lead Convertido em Cliente"
           }
+        },
+        privacy: {
+          title: "Privacidade e LGPD",
+          btnDelete: "Anonimizar Dados (Direito ao Esquecimento)",
+          deleteConfirm: "Esta ação é irreversível. O cliente será anonimizado no sistema. Deseja continuar?",
+          success: "Dados anonimizados com sucesso."
         }
       },
       form: {
@@ -326,7 +334,7 @@ export const COPY = {
         INATIVO: "Inativo"
       },
 
-      // --- NOVO: MARKETING CRM (Fase 3) ---
+      // MARKETING CRM (Fase 3)
       templates: {
         title: "Modelos de Mensagem",
         btnNew: "Novo Template",
@@ -374,6 +382,38 @@ export const COPY = {
           template: "Mensagem",
           preview: "Pré-visualização",
           submit: "Disparar Campanha"
+        }
+      },
+
+      // --- NOVO: PIPELINE DE LEADS (Fase 4) ---
+      leads: {
+        title: "Pipeline de Leads",
+        subtitle: "Gestão de Oportunidades",
+        btnNew: "Novo Potencial Cliente",
+        kanban: {
+          stages: {
+            NOVO: "Novo Contacto",
+            CONTACTADO: "Abordagem Feita",
+            INTERESSADO: "Em Negociação",
+            AGENDADO: "Primeira Visita",
+            CONVERTIDO: "Cliente Ganho",
+            PERDIDO: "Oportunidade Perdida"
+          }
+        },
+        form: {
+          source: "Origem do Contacto",
+          potential: "Valor Estimado (€)",
+          probability: "Probabilidade (%)",
+          btnConvert: "Converter em Cliente Real"
+        },
+        sources: {
+          INSTAGRAM: "Instagram",
+          FACEBOOK: "Facebook",
+          INDICACAO: "Indicação",
+          TRAFEGO_PAGO: "Ads (Google/Meta)",
+          ORGANICO: "Pesquisa Orgânica",
+          PASSAGEM: "Passou na Loja",
+          OUTRO: "Outra Origem"
         }
       }
     }
