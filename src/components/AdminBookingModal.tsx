@@ -1,3 +1,5 @@
+// src/components/AdminBookingModal.tsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
@@ -21,7 +23,12 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '
 
 // SERVIÇOS
 import { getOpenCashSession, addCashEntry } from '../services/cashService';
-import { upsertCustomer, recordCrmEvent, findCustomerByPhone } from '../services/crmService';
+import { 
+  upsertCustomer, 
+  recordCrmEvent, 
+  findCustomerByPhone,
+  checkAndConvertLeadOnBooking // Nova função de integridade importada
+} from '../services/crmService';
 
 // CONFIG E TIPOS
 import { CLIENT_ID } from '../constants';
@@ -153,6 +160,10 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         phone: formData.clientPhone,
         whatsapp: formData.clientPhone
       }, user.uid);
+
+      // --- PASSO 1.1: INTEGRIDADE LEADS (CONVERSÃO SILENCIOSA) ---
+      // Se este número pertencer a um Lead aberto, converte-o automaticamente
+      await checkAndConvertLeadOnBooking(formData.clientPhone, customerId, user.uid);
 
       const [h, m] = formData.startTime.split(':').map(Number);
       const endInMinutes = (h * 60 + m) + selectedService.duration;

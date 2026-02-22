@@ -263,7 +263,7 @@ export const updateLead = async (leadId: string, updates: Partial<Lead>): Promis
 };
 
 /**
- * CONVERSÃO: Transforma Lead em Cliente Real
+ * CONVERSÃO: Transforma Lead em Cliente Real (Manual via Kanban)
  */
 export const convertLeadToCustomer = async (leadId: string, adminId: string): Promise<string> => {
   const leadDoc = doc(db, "businesses", CLIENT_ID, "leads", leadId);
@@ -297,6 +297,65 @@ export const convertLeadToCustomer = async (leadId: string, adminId: string): Pr
   });
 
   return customerId;
+};
+
+/**
+ * LÓGICA DE INTEGRIDADE: Encontrar Lead Aberto por Telefone
+ */
+export const findOpenLeadByPhone = async (phone: string): Promise<Lead | null> => {
+  // Pesquisa pelo telefone e ordena pelo mais recente
+  const q = query(
+    leadsRef, 
+    where("phone", "==", phone), 
+    orderBy("createdAt", "desc"), 
+    limit(1)
+  );
+  
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  
+  const lead = { id: snap.docs[0].id, ...snap.docs[0].data() } as Lead;
+  
+  // Se já estiver convertido ou perdido, não faz nada
+  if (lead.stage === LeadStage.Converted || lead.stage === LeadStage.Lost) {
+    return null;
+  }
+  
+  return lead;
+};
+
+/**
+ * LÓGICA DE INTEGRIDADE: Conversão Silenciosa (Via Agenda)
+ * Chamado automaticamente quando um agendamento é criado para um número que era Lead
+ */
+export const checkAndConvertLeadOnBooking = async (
+  phone: string, 
+  customerId: string, 
+  adminId: string
+): Promise<string | null> => {
+  const lead = await findOpenLeadByPhone(phone);
+  
+  if (!lead || !lead.id) return null;
+
+  // 1. Converter o Lead
+  const leadDoc = doc(db, "businesses", CLIENT_ID, "leads", lead.id);
+  await updateDoc(leadDoc, {
+    stage: LeadStage.Converted,
+    customerId: customerId,
+    updatedAt: serverTimestamp()
+  });
+
+  // 2. Registar o sucesso na timeline (para o Admin saber que aconteceu)
+  await recordCrmEvent({
+    customerId,
+    type: CrmEventType.LeadConverted,
+    title: "Lead Convertido (Via Agenda)",
+    description: `Conversão automática ao realizar agendamento. Origem do contacto: ${lead.source}.`,
+    relatedId: lead.id,
+    createdBy: adminId
+  });
+
+  return lead.id;
 };
 
 /**
