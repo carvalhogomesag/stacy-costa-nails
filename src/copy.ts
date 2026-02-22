@@ -107,7 +107,8 @@ export const COPY = {
         cash: "CAIXA",
         crm: "CRM",
         design: "DESIGN",
-        settings: "CONFIG"
+        settings: "CONFIG",
+        team: "EQUIPA" // Adicionado para Fase 2
       },
       logout: "Sair",
       logoutConfirm: "Deseja sair do sistema de gestão?"
@@ -137,6 +138,43 @@ export const COPY = {
       blockTitle: "Bloquear Horário",
       activeBlocks: "Bloqueios Ativos",
       saveBtn: "Guardar Configuração"
+    },
+
+    // --- NOVO: MÓDULO DE EQUIPA (Fase 2) ---
+    team: {
+      title: "Gestão de Equipa",
+      subtitle: "Membros e Permissões",
+      btnNew: "Convidar Membro",
+      list: {
+        empty: "Nenhum membro registado na equipa.",
+        searchPlaceholder: "Procurar por nome ou email...",
+        statusActive: "Ativo",
+        statusInactive: "Inativo",
+        roleOwner: "Proprietário(a)",
+        roleManager: "Gerente",
+        roleProfessional: "Profissional",
+        roleReception: "Receção"
+      },
+      form: {
+        titleNew: "Novo Colaborador",
+        titleEdit: "Editar Colaborador",
+        fullName: "Nome Completo",
+        email: "Email de Acesso",
+        phone: "Telemóvel (Opcional)",
+        role: "Cargo / Nível de Acesso",
+        status: "Estado da Conta",
+        submit: "Guardar Membro",
+        helperProfessional: "Acesso apenas à própria agenda e métricas.",
+        helperReception: "Agenda global e CRM, sem acesso financeiro.",
+        helperManager: "Gestão operacional quase total.",
+        helperOwner: "Acesso irrestrito ao sistema."
+      },
+      alerts: {
+        saveSuccess: "Membro da equipa atualizado com sucesso.",
+        deleteConfirm: "Tem a certeza que deseja desativar o acesso deste colaborador?",
+        errorEmailExists: "Este email já está vinculado a um colaborador.",
+        statusChanged: "Estado da conta alterado com sucesso."
+      }
     },
 
     cash: {

@@ -1,9 +1,13 @@
+// src/index.tsx
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { THEME } from "./theme";
+import { AuthProvider } from "./context/AuthContext"; // Importação do novo motor de segurança
 
 // Injetar configuração do Tailwind dinamicamente via CDN config
+// Mantemos a fidelidade ao rito de design controlado pelo theme.ts
 if (typeof (window as any).tailwind !== 'undefined') {
   (window as any).tailwind.config = {
     theme: {
@@ -35,6 +39,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    {/* 
+        AuthProvider envolve toda a aplicação. 
+        Isto permite que useAuth() seja chamado em qualquer lugar.
+    */}
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </React.StrictMode>
 );

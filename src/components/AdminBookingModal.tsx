@@ -16,7 +16,8 @@ import {
   CreditCard,
   Banknote,
   Tag,
-  UserCheck
+  UserCheck,
+  UserCog
 } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -27,13 +28,15 @@ import {
   upsertCustomer, 
   recordCrmEvent, 
   findCustomerByPhone,
-  checkAndConvertLeadOnBooking // Nova função de integridade importada
+  checkAndConvertLeadOnBooking
 } from '../services/crmService';
+import { listActiveProfessionals } from '../services/authService';
 
-// CONFIG E TIPOS
+// CONFIG, CONTEXTO E TIPOS
 import { CLIENT_ID } from '../constants';
 import { COPY } from '../copy';
-import { Service, Appointment, PaymentMethod, EntryType, EntryOrigin, CrmEventType } from '../types';
+import { Service, Appointment, PaymentMethod, EntryType, EntryOrigin, CrmEventType, UserRole, AppUser } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface AdminBookingModalProps {
   isOpen: boolean;
@@ -43,14 +46,20 @@ interface AdminBookingModalProps {
 }
 
 const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, services, initialData }) => {
+  // --- SEGURANÇA E CONTEXTO (RBAC) ---
+  const { userData, role, isAdmin } = useAuth();
+  const isOnlyProfessional = role === UserRole.PROFESSIONAL;
+
   const [loading, setLoading] = useState(false);
   const [isExistingCustomer, setIsExistingCustomer] = useState(false);
+  const [professionals, setProfessionals] = useState<AppUser[]>([]);
   
   // Estados do Formulário
   const [formData, setFormData] = useState({
     clientName: '',
     clientPhone: '',
     serviceId: '',
+    professionalId: '', 
     date: new Date().toISOString().split('T')[0],
     startTime: '11:00'
   });
@@ -65,13 +74,25 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     return parseFloat(priceStr.replace(/[^0-9,.]/g, '').replace(',', '.')) || 0;
   };
 
-  // 1. SINCRONIZAÇÃO DE DADOS INICIAIS
+  // 1. CARREGAR PROFISSIONAIS (Para OWNER/MANAGER/RECEPTION)
+  useEffect(() => {
+    if (isOpen && !isOnlyProfessional) {
+      const fetchTeam = async () => {
+        const team = await listActiveProfessionals();
+        setProfessionals(team);
+      };
+      fetchTeam();
+    }
+  }, [isOpen, isOnlyProfessional]);
+
+  // 2. SINCRONIZAÇÃO DE DADOS INICIAIS
   useEffect(() => {
     if (initialData) {
       setFormData({
         clientName: initialData.clientName,
         clientPhone: initialData.clientPhone,
         serviceId: initialData.serviceId,
+        professionalId: initialData.professionalId,
         date: initialData.date,
         startTime: initialData.startTime
       });
@@ -81,16 +102,23 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
       setPaidAmount(initialData.paidAmount?.toString() || '');
       setIsExistingCustomer(!!initialData.customerId);
     } else {
-      setFormData({ clientName: '', clientPhone: '', serviceId: '', date: new Date().toISOString().split('T')[0], startTime: '11:00' });
+      setFormData({ 
+        clientName: '', 
+        clientPhone: '', 
+        serviceId: '', 
+        professionalId: isOnlyProfessional ? userData?.uid || '' : '', 
+        date: new Date().toISOString().split('T')[0], 
+        startTime: '11:00' 
+      });
       setIsPaid(false);
       setPaymentMethod(PaymentMethod.Cash);
       setDiscount('0');
       setPaidAmount('');
       setIsExistingCustomer(false);
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, isOnlyProfessional, userData]);
 
-  // 2. PESQUISA DE CLIENTE EXISTENTE (AUTO-FILL)
+  // 3. PESQUISA DE CLIENTE EXISTENTE (AUTO-FILL CRM)
   useEffect(() => {
     const searchCustomer = async () => {
       if (formData.clientPhone.length >= 9 && !initialData) {
@@ -106,7 +134,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     searchCustomer();
   }, [formData.clientPhone, initialData]);
 
-  // 3. LÓGICA DE AUTO-PREENCHIMENTO FINANCEIRO
+  // 4. LÓGICA DE AUTO-PREENCHIMENTO FINANCEIRO
   useEffect(() => {
     if (isPaid && !initialData?.isPaid && formData.serviceId) {
       const selectedService = services.find(s => s.id === formData.serviceId);
@@ -135,8 +163,12 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
     const user = auth.currentUser;
     const selectedService = services.find(s => s.id === formData.serviceId);
     
-    if (!selectedService || !user) {
-      alert("Erro na validação do formulário.");
+    // Obter nome do profissional para denormalização
+    const selectedProf = professionals.find(p => p.uid === formData.professionalId) || 
+                        (isOnlyProfessional ? { fullName: userData?.fullName } : null);
+
+    if (!selectedService || !user || !formData.professionalId) {
+      alert("Por favor, preencha todos os campos obrigatórios, incluindo o profissional.");
       setLoading(false);
       return;
     }
@@ -161,8 +193,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         whatsapp: formData.clientPhone
       }, user.uid);
 
-      // --- PASSO 1.1: INTEGRIDADE LEADS (CONVERSÃO SILENCIOSA) ---
-      // Se este número pertencer a um Lead aberto, converte-o automaticamente
+      // --- PASSO 1.1: INTEGRIDADE LEADS (CONVERSÃO) ---
       await checkAndConvertLeadOnBooking(formData.clientPhone, customerId, user.uid);
 
       const [h, m] = formData.startTime.split(':').map(Number);
@@ -171,18 +202,20 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
       const finalPaidAmount = parseFloat(paidAmount.replace(',', '.')) || 0;
 
-      const appointmentData: any = {
-        customerId, // Vínculo CRM
+      const appointmentData: Partial<Appointment> = {
+        customerId,
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
         serviceColor: selectedService.color || '#f5f5f4',
+        professionalId: formData.professionalId,
+        professionalName: selectedProf?.fullName || 'Profissional',
         date: formData.date,
         startTime: formData.startTime,
         endTime: endTime,
         isPaid,
-        paymentMethod: isPaid ? paymentMethod : null,
+        paymentMethod: isPaid ? paymentMethod : undefined,
         paidAmount: isPaid ? finalPaidAmount : 0,
         discount: isPaid ? (parseFloat(discount.replace(',', '.')) || 0) : 0,
         basePriceSnapshot: parsePrice(selectedService.price),
@@ -203,12 +236,12 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         finalApptId = docRef.id;
       }
 
-      // --- PASSO 3: REGISTAR TIMELINE (CRM EVENT) ---
+      // --- PASSO 3: REGISTAR TIMELINE CRM ---
       await recordCrmEvent({
         customerId,
         type: initialData ? CrmEventType.ManualEdit : CrmEventType.AppointmentCreated,
         title: initialData ? "Agendamento Editado" : "Nova Marcação Realizada",
-        description: `Serviço: ${selectedService.name} para o dia ${formData.date} às ${formData.startTime}`,
+        description: `Serviço: ${selectedService.name} com ${selectedProf?.fullName} para o dia ${formData.date} às ${formData.startTime}`,
         relatedId: finalApptId,
         createdBy: user.uid
       });
@@ -222,7 +255,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
           amount: finalPaidAmount,
           paymentMethod: paymentMethod,
           origin: EntryOrigin.Appointment,
-          description: `Serviço: ${selectedService.name} - Cliente: ${formData.clientName}`,
+          description: `Serviço: ${selectedService.name} (Prof: ${selectedProf?.fullName}) - Cliente: ${formData.clientName}`,
           relatedAppointmentId: finalApptId,
           createdBy: user.uid
         });
@@ -230,12 +263,11 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         const apptDoc = doc(db, "businesses", CLIENT_ID, "appointments", finalApptId!);
         await updateDoc(apptDoc, { cashEntryId: entryId });
 
-        // Evento de Pagamento na Timeline
         await recordCrmEvent({
           customerId,
           type: CrmEventType.PaymentReceived,
           title: "Pagamento Confirmado",
-          description: `Recebimento via ${paymentMethod} referente ao serviço ${selectedService.name}`,
+          description: `Recebimento referente ao serviço ${selectedService.name}`,
           amount: finalPaidAmount,
           relatedId: entryId,
           createdBy: user.uid
@@ -257,7 +289,6 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
 
     setLoading(true);
     try {
-      // Registo de cancelamento na Timeline antes de apagar (opcional, dependendo se queres manter o histórico de cancelados)
       if (initialData.customerId) {
         await recordCrmEvent({
           customerId: initialData.customerId,
@@ -295,7 +326,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
                 {initialData ? 'Detalhes da Marcação' : 'Nova Marcação Manual'}
               </h2>
               <p className="text-primary text-[10px] font-black uppercase tracking-widest mt-0.5">
-                {isPaid ? 'ATENDIMENTO FINALIZADO' : isExistingCustomer ? 'CLIENTE REGISTADO' : 'NOVO CLIENTE'}
+                {role} • {isPaid ? 'ATENDIMENTO FINALIZADO' : 'AGENDADO'}
               </p>
             </div>
           </div>
@@ -307,7 +338,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
         <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6 bg-brand-card max-h-[80vh] overflow-y-auto scrollbar-thin">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Telemóvel (Prioritário para pesquisa CRM) */}
+            {/* Telemóvel */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
                 <Phone size={12} className="text-primary" /> {COPY.bookingModal.placeholders.phone}
@@ -343,27 +374,55 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
-                <Scissors size={12} className="text-primary" /> {COPY.admin.dashboard.tabs.services}
-              </label>
-              <div className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: currentServiceColor }} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Seletor de Serviço */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                  <Scissors size={12} className="text-primary" /> Serviço
+                </label>
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: currentServiceColor }} />
+              </div>
+              <select 
+                required
+                className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary appearance-none font-medium"
+                value={formData.serviceId}
+                onChange={e => setFormData({...formData, serviceId: e.target.value})}
+              >
+                <option value="">Selecionar...</option>
+                {services.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.price})</option>
+                ))}
+              </select>
             </div>
-            <select 
-              required
-              className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary appearance-none font-medium"
-              value={formData.serviceId}
-              onChange={e => setFormData({...formData, serviceId: e.target.value})}
-            >
-              <option value="">Selecione um serviço...</option>
-              {services.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.price})</option>
-              ))}
-            </select>
+
+            {/* Seletor de Profissional (Dinâmico por Role) */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
+                <UserCog size={12} className="text-primary" /> Profissional
+              </label>
+              {isOnlyProfessional ? (
+                <div className="w-full bg-stone-100 border border-stone-200 rounded-xl p-4 text-stone-500 font-bold text-sm">
+                  {userData?.fullName}
+                </div>
+              ) : (
+                <select 
+                  required
+                  className="w-full bg-stone-50 border border-stone-100 rounded-xl p-4 text-primary-dark outline-none focus:border-primary appearance-none font-medium"
+                  value={formData.professionalId}
+                  onChange={e => setFormData({...formData, professionalId: e.target.value})}
+                >
+                  <option value="">Escolher profissional...</option>
+                  {professionals.map(p => (
+                    <option key={p.uid} value={p.uid}>{p.fullName}</option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-5">
+            {/* Data */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
                 <Calendar size={12} className="text-primary" /> Data
@@ -377,6 +436,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
               />
             </div>
 
+            {/* Hora Início */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-stone-400 uppercase ml-1 flex items-center gap-2 tracking-widest">
                 <Clock size={12} className="text-primary" /> Início
@@ -392,7 +452,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          {/* SECÇÃO FINANCEIRA AUTOMATIZADA */}
+          {/* SECÇÃO FINANCEIRA */}
           <div className="pt-4 border-t border-stone-100 space-y-4">
              <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isPaid ? 'bg-green-50 border-green-100' : 'bg-stone-50 border-stone-100'}`}>
                 <div className="flex items-center gap-3">
@@ -455,12 +515,6 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({ isOpen, onClose, 
                         </div>
                      </div>
                   </div>
-                  
-                  {initialData?.isPaid && (
-                    <p className="text-[9px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg text-center uppercase tracking-tighter">
-                      Pagamento já processado. Use a aba "Caixa" para estornos ou ajustes.
-                    </p>
-                  )}
                </div>
              )}
           </div>

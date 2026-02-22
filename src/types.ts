@@ -17,6 +17,33 @@ export interface Review {
   avatar?: string;
 }
 
+// --- GESTÃO DE UTILIZADORES E EQUIPA (NOVO FASE 1) ---
+
+export enum UserRole {
+  OWNER = 'OWNER',           // Acesso total
+  MANAGER = 'MANAGER',       // Gestão operacional, sem acesso a configurações críticas de conta
+  PROFESSIONAL = 'PROFESSIONAL', // Apenas a sua própria agenda e clientes
+  RECEPTION = 'RECEPTION'    // Agenda global, mas sem acesso a financeiro/equipa
+}
+
+export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE'
+}
+
+export interface AppUser {
+  uid: string;
+  businessId: string;
+  fullName: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  avatarUrl?: string;
+  phone?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
 export interface Appointment {
   id?: string;
   serviceId: string;
@@ -29,6 +56,10 @@ export interface Appointment {
   endTime: string;   
   createdAt: any;
   
+  // --- MULTI-PROFISSIONAL (NOVO FASE 1) ---
+  professionalId: string;   // UID do utilizador com role PROFESSIONAL
+  professionalName: string; // Nome para exibição rápida na agenda
+
   // --- INTEGRAÇÃO CRM ---
   customerId?: string;            
 
@@ -49,6 +80,8 @@ export interface WorkConfig {
   breakStart?: string; 
   breakEnd?: string;   
   daysOff: number[]; 
+  // Opcional: vincular a um profissional específico num futuro upgrade
+  userId?: string; 
 }
 
 export interface TimeBlock {
@@ -60,6 +93,7 @@ export interface TimeBlock {
   isRecurring: boolean;
   recurringType?: 'daily' | 'weekly' | 'monthly';
   repeatCount?: number; 
+  professionalId?: string; // Bloqueio pode ser para um profissional ou para a loja toda
 }
 
 export interface SocialLinks {
@@ -197,8 +231,8 @@ export enum CrmEventType {
   NoteAdded = 'NOTE_ADDED',
   CampaignSent = 'CAMPAIGN_SENT',
   ManualEdit = 'MANUAL_EDIT',
-  LeadCreated = 'LEAD_CREATED',      // NOVO: Fase 4
-  LeadConverted = 'LEAD_CONVERTED'   // NOVO: Fase 4
+  LeadCreated = 'LEAD_CREATED',
+  LeadConverted = 'LEAD_CONVERTED'
 }
 
 export interface CustomerTimelineEvent {
@@ -337,7 +371,7 @@ export interface CrmAutomationRun {
   createdAt: any;
 }
 
-// --- NOVO: MÓDULO DE LEADS E PIPELINE (FASE 4) ---
+// --- MÓDULO DE LEADS E PIPELINE ---
 
 export enum LeadSource {
   Instagram = 'INSTAGRAM',
@@ -350,12 +384,12 @@ export enum LeadSource {
 }
 
 export enum LeadStage {
-  New = 'NOVO',               // Lead acabou de chegar
-  Contacted = 'CONTACTADO',   // Primeira abordagem feita
-  Interested = 'INTERESSADO', // Demonstrou interesse real
-  Scheduled = 'AGENDADO',     // Marcou a primeira visita
-  Converted = 'CONVERTIDO',   // Compareceu e virou cliente oficial
-  Lost = 'PERDIDO'            // Desistiu ou não respondeu
+  New = 'NOVO',
+  Contacted = 'CONTACTADO',
+  Interested = 'INTERESSADO',
+  Scheduled = 'AGENDADO',
+  Converted = 'CONVERTIDO',
+  Lost = 'PERDIDO'
 }
 
 export interface Lead {
@@ -366,11 +400,24 @@ export interface Lead {
   whatsapp: string;
   source: LeadSource;
   stage: LeadStage;
-  potentialValue?: number;    // Valor estimado do serviço pretendido
-  probability: number;        // 0 a 100
+  potentialValue?: number;
+  probability: number;
   notes?: string;
-  customerId?: string;        // ID do cliente após conversão
+  customerId?: string;
   createdAt: any;
   createdBy: string;
   updatedAt?: any;
+}
+
+// --- AUDITORIA DE SISTEMA (NOVO FASE 1) ---
+
+export interface AuditLog {
+  id?: string;
+  businessId: string;
+  userId: string;          // Quem executou a ação
+  action: string;          // Ex: 'CREATE_USER', 'DELETE_APPT'
+  targetId: string;        // ID do objeto afetado
+  details: string;         // Descrição amigável
+  timestamp: any;
+  metadata?: any;          // Snapshot dos dados antes/depois
 }
