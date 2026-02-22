@@ -3,7 +3,8 @@ import { auth, db } from '../firebase';
 import { onSnapshot, query, collection, orderBy } from 'firebase/firestore';
 import { 
   LogOut, Heart, LayoutDashboard, Settings, 
-  Briefcase, Palette, Download, Menu, X, Wallet 
+  Briefcase, Palette, Download, Menu, X, Wallet,
+  Users // Ícone para o CRM
 } from 'lucide-react';
 import { Appointment, Service } from '../types';
 import { BUSINESS_INFO, CLIENT_ID } from '../constants';
@@ -14,7 +15,8 @@ import DashboardAppointments from './admin/DashboardAppointments';
 import DashboardServices from './admin/DashboardServices';
 import DashboardDesign from './admin/DashboardDesign';
 import DashboardSettings from './admin/DashboardSettings';
-import DashboardCash from './admin/cash/DashboardCash'; // NOVO: Componente do módulo de caixa
+import DashboardCash from './admin/cash/DashboardCash';
+import CustomerDashboard from './admin/crm/CustomerDashboard'; // NOVO: Módulo CRM
 import AdminBookingModal from './AdminBookingModal';
 
 interface AdminDashboardProps {
@@ -25,7 +27,7 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable, onInstallClick }) => {
   // --- NAVEGAÇÃO E UI ---
-  const [activeTab, setActiveTab] = useState<'appointments' | 'services' | 'cash' | 'visual' | 'settings'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'services' | 'cash' | 'crm' | 'visual' | 'settings'>('appointments');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // --- ESTADOS COMPARTILHADOS (MODAL & SERVIÇOS) ---
@@ -59,15 +61,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
     setIsAdminBookingOpen(true);
   };
 
-  const handleTabChange = (tab: 'appointments' | 'services' | 'cash' | 'visual' | 'settings') => {
+  const handleTabChange = (tab: any) => {
     setActiveTab(tab);
     setIsMobileMenuOpen(false); // Fecha o menu ao trocar de aba no mobile
   };
 
+  // Itens de Menu organizados por prioridade operacional
   const menuItems = [
     { id: 'appointments', label: COPY.admin.dashboard.tabs.appointments, icon: <LayoutDashboard size={20} /> },
+    { id: 'crm', label: COPY.admin.dashboard.tabs.crm, icon: <Users size={20} /> }, // NOVO: CRM em destaque
+    { id: 'cash', label: COPY.admin.dashboard.tabs.cash, icon: <Wallet size={20} /> },
     { id: 'services', label: COPY.admin.dashboard.tabs.services, icon: <Briefcase size={20} /> },
-    { id: 'cash', label: COPY.admin.dashboard.tabs.cash, icon: <Wallet size={20} /> }, // NOVO
     { id: 'visual', label: COPY.admin.dashboard.tabs.design, icon: <Palette size={20} /> },
     { id: 'settings', label: COPY.admin.dashboard.tabs.settings, icon: <Settings size={20} /> },
   ];
@@ -94,26 +98,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
             </div>
           </div>
 
-          {/* NAVEGAÇÃO DESKTOP (Pills) */}
+          {/* NAVEGAÇÃO DESKTOP (Abas Estilo Pill) */}
           <nav className="hidden lg:flex bg-stone-100 p-1 rounded-2xl border border-stone-200 overflow-x-auto no-scrollbar">
             <div className="flex gap-1">
               {menuItems.map((item) => (
                 <button 
                   key={item.id}
-                  onClick={() => handleTabChange(item.id as any)}
+                  onClick={() => handleTabChange(item.id)}
                   className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black transition-all tracking-wider shrink-0 ${
                     activeTab === item.id 
                     ? 'bg-primary text-white shadow-md' 
                     : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'
                   }`}
                 >
+                  {item.icon}
                   {item.label}
                 </button>
               ))}
             </div>
           </nav>
           
-          {/* AÇÕES (Desktop e Mobile Trigger) */}
+          {/* AÇÕES DE SISTEMA */}
           <div className="flex items-center gap-2 md:gap-4">
             {isInstallable && (
               <button 
@@ -132,7 +137,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
               <span className="uppercase tracking-widest text-[11px]">{COPY.admin.dashboard.logout}</span>
             </button>
 
-            {/* HAMBÚRGUER MOBILE TRIGGER */}
+            {/* BOTÃO HAMBÚRGUER MOBILE */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden p-2.5 bg-primary text-white rounded-xl shadow-lg active:scale-95 transition-all"
@@ -148,11 +153,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
         <div className="lg:hidden fixed inset-0 z-[100] animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-brand-footer/60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
           <nav className="absolute right-4 top-24 left-4 bg-brand-card rounded-[2rem] border border-primary/20 shadow-2xl p-6 space-y-3 animate-in slide-in-from-top-4 duration-300">
-            <p className="text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-4 ml-2">Navegação</p>
+            <p className="text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-4 ml-2">Gestão de Negócio</p>
             {menuItems.map((item) => (
               <button 
                 key={item.id}
-                onClick={() => handleTabChange(item.id as any)}
+                onClick={() => handleTabChange(item.id)}
                 className={`w-full flex items-center gap-4 p-5 rounded-2xl text-sm font-bold transition-all ${
                   activeTab === item.id 
                   ? 'bg-primary text-white shadow-xl translate-x-2' 
@@ -178,7 +183,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
         </div>
       )}
 
-      {/* ÁREA DE CONTEÚDO PRINCIPAL */}
+      {/* ÁREA DE CONTEÚDO DINÂMICO (CORE) */}
       <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-brand-bg pb-8">
         <div className="container mx-auto max-w-6xl h-full">
           {activeTab === 'appointments' && (
@@ -196,6 +201,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
             <DashboardCash />
           )}
 
+          {/* LIGAÇÃO CRM ATIVADA */}
+          {activeTab === 'crm' && (
+            <CustomerDashboard />
+          )}
+
           {activeTab === 'visual' && (
             <DashboardDesign />
           )}
@@ -206,12 +216,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, isInstallable
         </div>
       </main>
 
-      {/* FOOTER */}
+      {/* RODAPÉ DO PAINEL */}
       <footer className="hidden md:flex p-3 text-center text-stone-400 text-[9px] uppercase font-bold tracking-[0.4em] bg-brand-card border-t border-stone-200 justify-center items-center gap-2">
         <span>Sistema de Gestão {BUSINESS_INFO.name} • {COPY.footer.devTag}</span>
       </footer>
 
-      {/* MODAL MANTIDO PELO PAI */}
+      {/* MODAL DE AGENDAMENTO (MANTIDO PELO PAI PARA GLOBALIDADE) */}
       <AdminBookingModal 
         isOpen={isAdminBookingOpen} 
         onClose={() => setIsAdminBookingOpen(false)} 
