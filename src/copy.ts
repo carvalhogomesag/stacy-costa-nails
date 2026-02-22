@@ -324,6 +324,57 @@ export const COPY = {
         NO_SHOW_FREQUENTE: "No-Show",
         INTERESSADO: "Lead Quente",
         INATIVO: "Inativo"
+      },
+
+      // --- NOVO: MARKETING CRM (Fase 3) ---
+      templates: {
+        title: "Modelos de Mensagem",
+        btnNew: "Novo Template",
+        empty: "Nenhum modelo criado.",
+        form: {
+          title: "Nome do Modelo",
+          body: "Conteúdo da Mensagem",
+          bodyHint: "Use {{nome}} para personalizar.",
+          channel: "Canal de Envio",
+          save: "Guardar Modelo"
+        }
+      },
+      automations: {
+        title: "Regras Automáticas",
+        btnNew: "Nova Automação",
+        empty: "Nenhuma regra ativa.",
+        statusActive: "Ativa",
+        statusInactive: "Pausa",
+        triggers: {
+          POST_SERVICE: "Pós-atendimento (Obrigado)",
+          BIRTHDAY: "Felicitações de Aniversário",
+          INACTIVE_RETENTION: "Recuperação (Inativo)",
+          NOSHOW_RECOVERY: "Falta (No-Show)"
+        },
+        form: {
+          title: "Nome da Regra",
+          trigger: "Quando disparar?",
+          delay: "Janela de Envio (Dias)",
+          template: "Mensagem a enviar",
+          save: "Ativar Automação"
+        }
+      },
+      campaigns: {
+        title: "Envios em Massa",
+        btnNew: "Nova Campanha",
+        empty: "Nenhuma campanha realizada.",
+        stats: {
+          target: "Público",
+          sent: "Enviados",
+          conversion: "Retornos"
+        },
+        form: {
+          title: "Título da Campanha",
+          target: "Quem recebe?",
+          template: "Mensagem",
+          preview: "Pré-visualização",
+          submit: "Disparar Campanha"
+        }
       }
     }
   }

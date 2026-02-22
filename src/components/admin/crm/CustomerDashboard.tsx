@@ -6,7 +6,9 @@ import {
   Zap, 
   BarChart3, 
   Plus, 
-  UserPlus
+  UserPlus,
+  Send,
+  FileCode
 } from 'lucide-react';
 import { COPY } from '../../../copy';
 import { Customer } from '../../../types';
@@ -16,11 +18,16 @@ import CustomerList from './CustomerList';
 import CustomerProfile from './CustomerProfile';
 import CustomerFormModal from './CustomerFormModal';
 import CrmInsights from './CrmInsights';
-import CrmTasks from './CrmTasks'; // NOVO: Importação do módulo de tarefas
+import CrmTasks from './CrmTasks';
+
+// NOVOS: Componentes de Marketing (Fase 3)
+import MarketingTemplates from './MarketingTemplates';
+import MarketingAutomations from './MarketingAutomations';
+import MarketingCampaigns from './MarketingCampaigns';
 
 const CustomerDashboard: React.FC = () => {
   // --- ESTADOS DE NAVEGAÇÃO CRM ---
-  const [activeTab, setActiveTab] = useState<'customers' | 'leads' | 'tasks' | 'automations' | 'insights'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'leads' | 'tasks' | 'automations' | 'campaigns' | 'templates' | 'insights'>('customers');
   
   // Controlo de Visualização (Lista vs Perfil Detalhado)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -33,8 +40,10 @@ const CustomerDashboard: React.FC = () => {
     { id: 'customers', label: COPY.admin.crm.tabs.customers, icon: <Users size={18} /> },
     { id: 'tasks', label: COPY.admin.crm.tabs.tasks, icon: <CheckSquare size={18} /> },
     { id: 'insights', label: COPY.admin.crm.tabs.insights, icon: <BarChart3 size={18} /> },
-    { id: 'leads', label: COPY.admin.crm.tabs.leads, icon: <Target size={18} /> },
+    { id: 'campaigns', label: COPY.admin.crm.tabs.campaigns, icon: <Send size={18} /> },
     { id: 'automations', label: COPY.admin.crm.tabs.automations, icon: <Zap size={18} /> },
+    { id: 'templates', label: COPY.admin.crm.templates.title, icon: <FileCode size={18} /> },
+    { id: 'leads', label: COPY.admin.crm.tabs.leads, icon: <Target size={18} /> },
   ];
 
   // Handler para quando um cliente é selecionado na lista
@@ -110,20 +119,25 @@ const CustomerDashboard: React.FC = () => {
               <CrmInsights />
             )}
 
-            {/* PLACEHOLDERS PARA PRÓXIMAS FASES (3 e 4) */}
+            {/* ATIVAÇÃO FASE 3: MARKETING */}
+            {activeTab === 'campaigns' && (
+              <MarketingCampaigns />
+            )}
+
+            {activeTab === 'automations' && (
+              <MarketingAutomations />
+            )}
+
+            {activeTab === 'templates' && (
+              <MarketingTemplates />
+            )}
+
+            {/* PLACEHOLDER FASE 4: LEADS */}
             {activeTab === 'leads' && (
               <div className="bg-brand-card border border-stone-200 border-dashed rounded-[2rem] p-20 text-center animate-in zoom-in-95">
                  <Target className="mx-auto text-stone-200 mb-4" size={48} />
                  <h4 className="text-stone-400 font-bold uppercase tracking-widest text-xs">Gestão de Leads</h4>
                  <p className="text-stone-400 text-sm mt-2 font-light">Este módulo será ativado na Fase 4 (Pipeline Comercial).</p>
-              </div>
-            )}
-
-            {activeTab === 'automations' && (
-              <div className="bg-brand-card border border-stone-200 border-dashed rounded-[2rem] p-20 text-center animate-in zoom-in-95">
-                 <Zap className="mx-auto text-stone-200 mb-4" size={48} />
-                 <h4 className="text-stone-400 font-bold uppercase tracking-widest text-xs">Workflows Automáticos</h4>
-                 <p className="text-stone-400 text-sm mt-2 font-light">Automações de marketing e retorno agendadas para a Fase 3.</p>
               </div>
             )}
           </>

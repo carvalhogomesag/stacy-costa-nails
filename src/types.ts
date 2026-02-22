@@ -29,7 +29,7 @@ export interface Appointment {
   endTime: string;   
   createdAt: any;
   
-  // --- INTEGRAÇÃO CRM (FASE 1) ---
+  // --- INTEGRAÇÃO CRM ---
   customerId?: string;            
 
   // --- CAMPOS PARA INTEGRAÇÃO COM CAIXA ---
@@ -178,7 +178,7 @@ export interface CashSummary {
   totalByMethod: Record<PaymentMethod, number>;
 }
 
-// --- MÓDULO CRM ---
+// --- MÓDULO CRM BASE ---
 
 export enum CustomerTag {
   VIP = 'VIP',
@@ -240,7 +240,7 @@ export interface Customer {
   updatedAt?: any;
 }
 
-// --- NOVO: MÓDULO DE TAREFAS CRM (FASE 2) ---
+// --- MÓDULO DE TAREFAS CRM ---
 
 export enum CrmTaskStatus {
   Pending = 'PENDENTE',
@@ -258,14 +258,79 @@ export enum CrmTaskPriority {
 export interface CrmTask {
   id?: string;
   businessId: string;
-  customerId?: string;       // Vínculo opcional com cliente
-  title: string;             // Ex: "Ligar para confirmar retorno"
+  customerId?: string;       
+  title: string;             
   description: string;
-  dueDate: string;           // YYYY-MM-DD
+  dueDate: string;           
   priority: CrmTaskPriority;
   status: CrmTaskStatus;
-  assignedTo: string;        // ID do utilizador/colaborador
+  assignedTo: string;        
   createdAt: any;
   createdBy: string;
   updatedAt?: any;
+}
+
+// --- MÓDULO DE MARKETING CRM ---
+
+export enum CrmChannel {
+  WhatsApp = 'WHATSAPP',
+  SMS = 'SMS',
+  Email = 'EMAIL'
+}
+
+export enum CrmAutomationTrigger {
+  AfterService = 'POST_SERVICE',       
+  Birthday = 'BIRTHDAY',              
+  InactiveRetention = 'INACTIVE_RETENTION', // CORRIGIDO: Sem espaços
+  NoShow = 'NOSHOW_RECOVERY'          
+}
+
+export interface CrmTemplate {
+  id?: string;
+  businessId: string;
+  title: string;
+  body: string;                        
+  channel: CrmChannel;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export interface CrmAutomation {
+  id?: string;
+  businessId: string;
+  title: string;
+  trigger: CrmAutomationTrigger;
+  delayDays: number;                   
+  templateId: string;
+  isActive: boolean;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export interface CrmCampaign {
+  id?: string;
+  businessId: string;
+  title: string;
+  templateId: string;
+  targetTag?: CustomerTag | 'ALL';
+  scheduledDate?: string;              
+  status: 'DRAFT' | 'SENDING' | 'SENT' | 'FAILED';
+  stats: {
+    totalTargeted: number;
+    sentCount: number;
+    deliveredCount?: number;
+    clickedCount?: number;             
+  };
+  createdAt: any;
+  createdBy: string;
+}
+
+export interface CrmAutomationRun {
+  id?: string;
+  businessId: string;
+  automationId: string;
+  customerId: string;
+  executionDate: string;               
+  status: 'SUCCESS' | 'FAILED';
+  createdAt: any;
 }
