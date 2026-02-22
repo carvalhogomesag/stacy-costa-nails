@@ -6,7 +6,7 @@ export interface Service {
   description: string;
   price: string;
   duration: number; 
-  color?: string; // Cor hexadecimal escolhida pelo profissional
+  color?: string; 
 }
 
 export interface Review {
@@ -21,7 +21,7 @@ export interface Appointment {
   id?: string;
   serviceId: string;
   serviceName: string;
-  serviceColor?: string; // Cor do serviço no momento da marcação (para performance)
+  serviceColor?: string; 
   clientName: string;
   clientPhone: string;
   date: string; 
@@ -29,15 +29,20 @@ export interface Appointment {
   endTime: string;   
   createdAt: any;
   
+  // --- INTEGRAÇÃO CRM (FASE 1) ---
+  customerId?: string;            // Vínculo com a entidade cliente centralizada
+
   // --- CAMPOS PARA INTEGRAÇÃO COM CAIXA ---
-  isPaid?: boolean;               // Indica se o serviço já foi cobrado
-  paymentMethod?: PaymentMethod;  // Método utilizado no acerto
-  paidAmount?: number;            // Valor real final pago pelo cliente
-  discount?: number;              // Valor do desconto aplicado (em Euros)
-  basePriceSnapshot?: number;     // Preço base do serviço no momento da finalização
-  cashEntryId?: string;           // Vínculo direto com o lançamento no caixa
+  isPaid?: boolean;               
+  paymentMethod?: PaymentMethod;  
+  paidAmount?: number;            
+  discount?: number;              
+  basePriceSnapshot?: number;     
+  cashEntryId?: string;           
   updatedAt?: any;
 }
+
+// ... (WorkConfig, TimeBlock, SocialLinks, GalleryImage, BusinessProfile inalterados)
 
 export interface WorkConfig {
   id?: string;
@@ -78,23 +83,23 @@ export interface BusinessProfile {
   updatedAt?: any;
 }
 
-// --- INTERFACES E ENUMS PARA O MÓDULO DE CAIXA ---
+// --- MÓDULO DE CAIXA ---
 
 export enum EntryType {
-  Income = 'INCOME',               // Receita manual
-  Expense = 'EXPENSE',             // Despesa manual
-  Adjustment = 'ADJUSTMENT',       // Ajuste manual (reforço/sangria)
-  Refund = 'REFUND',               // Reembolso manual
-  AppointmentIncome = 'APPT_INC',  // Receita vinda de agendamento
-  AppointmentRefund = 'APPT_REF',  // Estorno vindo de agendamento
+  Income = 'INCOME',
+  Expense = 'EXPENSE',
+  Adjustment = 'ADJUSTMENT',
+  Refund = 'REFUND',
+  AppointmentIncome = 'APPT_INC',
+  AppointmentRefund = 'APPT_REF',
 }
 
 export enum PaymentMethod {
-  Cash = 'CASH',                   // Dinheiro
-  Card = 'CARD',                   // Cartão
-  MBWay = 'MBWAY',                 // MBWay (Portugal)
-  Pix = 'PIX',                     // Pix (Brasil)
-  BankTransfer = 'TRANSFER',       // Transferência
+  Cash = 'CASH',
+  Card = 'CARD',
+  MBWay = 'MBWAY',
+  Pix = 'PIX',
+  BankTransfer = 'TRANSFER',
   Other = 'OTHER',
 }
 
@@ -110,18 +115,14 @@ export enum SessionStatus {
   Reconciled = 'RECONCILED',
 }
 
-/**
- * Interface para o rasto de auditoria (Audit Trail)
- * Regista o "Antes" e o "Depois" de cada alteração crítica
- */
 export interface EntryChangeLog {
   timestamp: any;
   previousAmount: number;
   newAmount: number;
-  previousDescription?: string; // NOVO: Rastrear mudança de contexto
-  newDescription?: string;      // NOVO: Rastrear mudança de contexto
-  reason: string;               // Justificação obrigatória
-  updatedBy: string;            // ID do administrador que fez a retificação
+  previousDescription?: string;
+  newDescription?: string;
+  reason: string;
+  updatedBy: string;
 }
 
 export interface CashEntry {
@@ -140,11 +141,9 @@ export interface CashEntry {
   createdBy: string; 
   updatedAt?: any;
   updatedBy?: string;
-
-  // --- CAMPOS DE AUDITORIA ---
   isEdited?: boolean;              
   originalAmount?: number;         
-  originalDescription?: string;    // NOVO: Valor original da descrição
+  originalDescription?: string;    
   lastEditReason?: string;         
   history?: EntryChangeLog[];      
 }
@@ -155,21 +154,17 @@ export interface CashSession {
   openingDate: string; 
   initialBalance: number;
   status: SessionStatus;
-  
-  // Preenchidos no fecho
   closingDate?: string;
   finalBalance?: number;     
   expectedBalance?: number;  
   divergenceAmount?: number; 
   divergenceNotes?: string;
-  
   closedAt?: any;
   closedBy?: string;
   createdAt: any;
   createdBy: string;
   updatedAt?: any;
   updatedBy?: string;
-  
   auditLog?: Array<{
     timestamp: any;
     action: string;
@@ -183,4 +178,73 @@ export interface CashSummary {
   totalIncome: number;
   totalExpense: number;
   totalByMethod: Record<PaymentMethod, number>;
+}
+
+// --- NOVO: MÓDULO CRM (FASE 1) ---
+
+export enum CustomerTag {
+  VIP = 'VIP',
+  New = 'NOVO',
+  ChurnRisk = 'RISCO_ABANDONO',
+  NoShowRecurrent = 'NO_SHOW_FREQUENTE',
+  HotLead = 'INTERESSADO',
+  Inactive = 'INATIVO'
+}
+
+export enum CrmEventType {
+  AppointmentCreated = 'APPT_CREATED',
+  AppointmentDone = 'APPT_DONE',
+  AppointmentCanceled = 'APPT_CANCELED',
+  PaymentReceived = 'PAYMENT_RECEIVED',
+  NoteAdded = 'NOTE_ADDED',
+  CampaignSent = 'CAMPAIGN_SENT',
+  ManualEdit = 'MANUAL_EDIT'
+}
+
+export interface CustomerTimelineEvent {
+  id?: string;
+  customerId: string;
+  type: CrmEventType;
+  title: string;
+  description: string;
+  amount?: number;           // Se houver valor financeiro no evento
+  relatedId?: string;        // ID do agendamento ou transação de caixa
+  createdAt: any;            // Timestamp
+  createdBy: string;         // Admin ID
+}
+
+export interface Customer {
+  id?: string;
+  name: string;
+  phone: string;             // Chave única de deduplicação
+  whatsapp: string;
+  email?: string;
+  birthday?: string;         // DD/MM
+  gender?: string;
+  notes?: string;
+  tags: CustomerTag[];
+  
+  // Consentimento LGPD
+  marketingConsent: boolean;
+  consentDate?: any;
+
+  // Estatísticas (Desnormalizadas para performance de segmentação)
+  stats: {
+    totalSpent: number;      // LTV (Lifetime Value)
+    appointmentsCount: number;
+    lastVisitDate?: string;  // YYYY-MM-DD
+    averageTicket: number;
+    noShowCount: number;
+  };
+
+  // Preferências
+  preferences: {
+    favoriteServices: string[]; // IDs dos serviços
+    preferredStaff?: string;
+    preferredTimeSlot?: string; // Ex: "Manhã", "Tarde"
+  };
+
+  createdAt: any;
+  createdBy: string;
+  updatedAt?: any;
 }

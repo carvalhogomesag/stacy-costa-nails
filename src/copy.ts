@@ -105,6 +105,7 @@ export const COPY = {
         appointments: "MARCAÇÕES",
         services: "SERVIÇOS",
         cash: "CAIXA",
+        crm: "CRM",
         design: "DESIGN",
         settings: "CONFIG"
       },
@@ -138,7 +139,6 @@ export const COPY = {
       saveBtn: "Guardar Configuração"
     },
 
-    // --- MÓDULO DE CAIXA ---
     cash: {
       title: "Controlo de Caixa",
       subtitle: "Fluxo financeiro diário",
@@ -146,12 +146,10 @@ export const COPY = {
       btnOpen: "Abrir Caixa Hoje",
       btnClose: "Fechar Caixa",
       btnNewEntry: "Novo Lançamento",
-
       tabs: {
         current: "Sessão Atual",
         history: "Histórico & Relatórios"
       },
-      
       summary: {
         balance: "Saldo Atual",
         income: "Total Entradas",
@@ -162,14 +160,12 @@ export const COPY = {
         billing: "Faturação Total",
         average: "Média por Sessão"
       },
-
       openModal: {
         title: "Abertura de Caixa",
         label: "Valor Inicial em Fundo de Maneio",
         placeholder: "0,00€",
         submit: "Confirmar Abertura"
       },
-
       entryModal: {
         title: "Novo Lançamento",
         type: "Tipo de Movimento",
@@ -185,7 +181,6 @@ export const COPY = {
           refund: "Reembolso"
         }
       },
-
       editModal: {
         title: "Retificar Lançamento",
         labelOriginal: "Valor Original",
@@ -201,7 +196,6 @@ export const COPY = {
           colReason: "Justificação"
         }
       },
-
       closeModal: {
         title: "Fecho de Caixa",
         instruction: "Conte o dinheiro físico e some os comprovativos de cartão/MBWay.",
@@ -209,7 +203,6 @@ export const COPY = {
         labelNotes: "Notas de Fecho (Obrigatório se houver divergência)",
         submit: "Encerrar Sessão"
       },
-
       list: {
         title: "Movimentos da Sessão",
         empty: "Nenhum movimento registado nesta sessão.",
@@ -223,7 +216,6 @@ export const COPY = {
           reason: "Motivo da última alteração"
         }
       },
-
       history: {
         title: "Histórico de Sessões",
         filterLabel: "Filtrar Período",
@@ -239,7 +231,6 @@ export const COPY = {
           all: "Todo o histórico"
         }
       },
-
       pdfLabels: {
         title: "Relatório de Fluxo de Caixa",
         generatedAt: "Gerado em:",
@@ -253,7 +244,6 @@ export const COPY = {
         auditColRef: "Movimento",
         auditColHistory: "Evolução do Valor e Motivo"
       },
-
       methods: {
         CASH: "Dinheiro",
         CARD: "Cartão",
@@ -261,6 +251,79 @@ export const COPY = {
         PIX: "Pix",
         TRANSFER: "Transferência",
         OTHER: "Outro"
+      }
+    },
+
+    // --- MÓDULO CRM ---
+    crm: {
+      title: "Gestão de Clientes",
+      subtitle: "Relacionamento e Fidelização",
+      tabs: {
+        customers: "Clientes",
+        leads: "Leads/Interessados",
+        tasks: "Tarefas",
+        automations: "Automações",
+        campaigns: "Campanhas",
+        insights: "Dashboard CRM"
+      },
+      list: {
+        searchPlaceholder: "Procurar por nome, telemóvel ou tag...",
+        filterTags: "Filtrar por Perfil",
+        empty: "Nenhum cliente encontrado.",
+        btnNew: "Novo Cliente",
+        totalLabel: "Clientes na Base"
+      },
+      profile: {
+        tabs: {
+          timeline: "Timeline",
+          info: "Cadastro",
+          finance: "Financeiro",
+          prefs: "Preferências"
+        },
+        stats: {
+          ltv: "Gasto Total (LTV)",
+          visits: "Visitas",
+          avgTicket: "Ticket Médio",
+          lastVisit: "Última Visita",
+          noShow: "Faltas (No-Show)"
+        },
+        timeline: {
+          title: "Histórico de Interações",
+          empty: "Sem eventos registados para este cliente.",
+          eventTypes: {
+            APPT_CREATED: "Agendamento Criado",
+            APPT_DONE: "Atendimento Concluído",
+            APPT_CANCELED: "Agendamento Cancelado",
+            PAYMENT_RECEIVED: "Pagamento Registado",
+            NOTE_ADDED: "Nota Interna",
+            CAMPAIGN_SENT: "Campanha Enviada",
+            MANUAL_EDIT: "Dados Retificados"
+          }
+        }
+      },
+      form: {
+        titleNew: "Novo Cadastro",
+        titleEdit: "Editar Cliente",
+        personalInfo: "Dados Pessoais",
+        name: "Nome Completo",
+        phone: "Telemóvel",
+        whatsapp: "WhatsApp",
+        email: "Email (Opcional)",
+        birthday: "Aniversário",
+        gender: "Género",
+        tags: "Tags de Perfil",
+        notes: "Observações Internas",
+        consent: "Autoriza comunicações de marketing?",
+        save: "Guardar Cliente",
+        errorDuplicate: "Já existe um cliente com este número de telemóvel."
+      },
+      tags: {
+        VIP: "VIP",
+        NOVO: "Novo",
+        RISCO_ABANDONO: "Risco Churn",
+        NO_SHOW_FREQUENTE: "No-Show",
+        INTERESSADO: "Lead Quente",
+        INATIVO: "Inativo"
       }
     }
   }
