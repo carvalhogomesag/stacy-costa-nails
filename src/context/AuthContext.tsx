@@ -3,15 +3,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { auth } from '../firebase';
-import { getUserProfile } from '../services/authService';
-import { AppUser, UserRole } from '../types';
+import { getUserProfile, createAppUser } from '../services/authService';
+import { AppUser, UserRole, UserStatus } from '../types';
 
 interface AuthContextType {
-  user: User | null;           // Utilizador do Firebase Auth
-  userData: AppUser | null;    // Perfil detalhado do Firestore (Role, etc)
-  loading: boolean;            // Estado de carregamento inicial
-  role: UserRole | null;       // Atalho para a Role do utilizador
-  isAdmin: boolean;            // Atalho para Owner/Manager
+  user: User | null;
+  userData: AppUser | null;
+  loading: boolean;
+  role: UserRole | null;
+  isAdmin: boolean;
   logout: () => Promise<void>;
 }
 
@@ -23,31 +23,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Subscreve às mudanças de estado de autenticação do Firebase
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
-      
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        // Busca o perfil detalhado com a Role no Firestore
-        const profile = await getUserProfile(firebaseUser.uid);
-        setUserData(profile);
-      } else {
-        setUser(null);
-        setUserData(null);
+      try {
+        setLoading(true);
+        
+        if (firebaseUser) {
+          setUser(firebaseUser);
+          
+          // 1. Tentar obter o perfil
+          let profile = await getUserProfile(firebaseUser.uid);
+
+          // 2. Lógica de Bootstrap (Auto-criação para o primeiro acesso)
+          if (!profile) {
+            console.log("Perfil não encontrado. A tentar criar perfil de OWNER...");
+            try {
+              await createAppUser({
+                uid: firebaseUser.uid,
+                fullName: firebaseUser.displayName || 'Administrador',
+                email: firebaseUser.email || '',
+                role: UserRole.OWNER,
+                status: UserStatus.ACTIVE
+              });
+              // Tenta ler novamente após criar
+              profile = await getUserProfile(firebaseUser.uid);
+            } catch (createError) {
+              console.error("Erro crítico: As regras do Firestore impediram a auto-criação.", createError);
+              // Se falhar aqui, é porque as regras de segurança já estão ativas e barram o 'desconhecido'
+            }
+          }
+          
+          setUserData(profile);
+        } else {
+          setUser(null);
+          setUserData(null);
+        }
+      } catch (globalError) {
+        console.error("Erro na sincronização de autenticação:", globalError);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
   const logout = async () => {
+    setLoading(true);
     await signOut(auth);
+    setUserData(null);
+    setUser(null);
+    setLoading(false);
   };
 
-  // Helpers de permissão rápidos
   const role = userData?.role || null;
   const isAdmin = role === UserRole.OWNER || role === UserRole.MANAGER;
 
@@ -61,10 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout 
     }}>
       {loading ? (
-        // Loader global de sistema para evitar "piscadelas" de UI
-        <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center">
-          <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-          <p className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">A validar acesso...</p>
+        <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+          <p className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">A validar acesso seguro...</p>
         </div>
       ) : (
         children
@@ -73,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// Hook personalizado para usar o contexto de forma simples
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
