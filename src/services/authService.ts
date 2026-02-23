@@ -26,7 +26,7 @@ const auditRef = collection(db, "businesses", CLIENT_ID, "auditLogs");
 
 /**
  * 1. Obter Perfil Completo do Utilizador
- * Chamado logo após o login para carregar permissões (Roles)
+ * Crucial para o AuthContext decidir as permissões de UI.
  */
 export const getUserProfile = async (uid: string): Promise<AppUser | null> => {
   try {
@@ -36,37 +36,47 @@ export const getUserProfile = async (uid: string): Promise<AppUser | null> => {
     if (!snap.exists()) return null;
     
     return { uid: snap.id, ...snap.data() } as AppUser;
-  } catch (error) {
-    console.error("Erro ao procurar perfil de utilizador:", error);
+  } catch (error: any) {
+    // Se o erro for 'permission-denied', é porque as Rules bloquearam a leitura
+    if (error.code === 'permission-denied') {
+      console.warn("Acesso ao perfil negado pelas Firestore Rules. Documento pode não existir ou utilizador sem permissão.");
+    } else {
+      console.error("Erro ao procurar perfil de utilizador:", error);
+    }
     return null;
   }
 };
 
 /**
- * 2. Inicializar Novo Utilizador (Primeiro Registo/Convite)
- * Salva os metadados do utilizador no Firestore vinculados ao Auth UID
+ * 2. Inicializar Novo Utilizador (Bootstrap / Convite)
+ * Salva os metadados do utilizador no Firestore vinculados ao Auth UID.
  */
 export const createAppUser = async (data: Omit<AppUser, 'createdAt' | 'updatedAt' | 'businessId'>): Promise<void> => {
-  const userDoc = doc(db, "businesses", CLIENT_ID, "users", data.uid);
-  
-  const newUser: AppUser = {
-    ...data,
-    businessId: CLIENT_ID,
-    status: UserStatus.ACTIVE,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  };
+  try {
+    const userDoc = doc(db, "businesses", CLIENT_ID, "users", data.uid);
+    
+    const newUser: AppUser = {
+      ...data,
+      businessId: CLIENT_ID,
+      status: UserStatus.ACTIVE,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
 
-  await setDoc(userDoc, newUser);
-  
-  // Registar auditoria da criação
-  await logAuditAction({
-    userId: "SYSTEM", // No Onboarding inicial é o sistema
-    action: "USER_CREATED",
-    targetId: data.uid,
-    details: `Novo utilizador criado: ${data.fullName} (${data.role})`,
-    timestamp: serverTimestamp()
-  });
+    await setDoc(userDoc, newUser);
+    
+    // Registar auditoria da criação
+    await logAuditAction({
+      userId: "SYSTEM",
+      action: "USER_CREATED",
+      targetId: data.uid,
+      details: `Novo utilizador criado: ${data.fullName} (${data.role})`,
+      timestamp: serverTimestamp()
+    });
+  } catch (error: any) {
+    console.error("Erro crítico ao criar utilizador no Firestore:", error.message);
+    throw error; // Repassa o erro para o AuthContext tratar
+  }
 };
 
 /**
@@ -92,32 +102,41 @@ export const updateAppUser = async (uid: string, updates: Partial<AppUser>, admi
 
 /**
  * 4. Listar Todos os Membros da Equipa
- * Usado no painel de gestão de equipa (Owner/Manager)
+ * Usado no painel de gestão de equipa (Owner/Manager).
  */
 export const listTeamMembers = async (): Promise<AppUser[]> => {
-  const q = query(usersRef, orderBy("fullName", "asc"));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ uid: d.id, ...d.data() } as AppUser));
+  try {
+    const q = query(usersRef, orderBy("fullName", "asc"));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ uid: d.id, ...d.data() } as AppUser));
+  } catch (error) {
+    console.error("Erro ao listar equipa (Firestore Rules podem estar a bloquear):", error);
+    return [];
+  }
 };
 
 /**
  * 5. Listar Apenas Profissionais Ativos
- * Usado para popular filtros de agenda e seletores de atendimento
+ * Usado para popular filtros de agenda e seletores de atendimento.
  */
 export const listActiveProfessionals = async (): Promise<AppUser[]> => {
-  const q = query(
-    usersRef, 
-    where("role", "==", UserRole.PROFESSIONAL),
-    where("status", "==", UserStatus.ACTIVE),
-    orderBy("fullName", "asc")
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ uid: d.id, ...d.data() } as AppUser));
+  try {
+    const q = query(
+      usersRef, 
+      where("role", "==", UserRole.PROFESSIONAL),
+      where("status", "==", UserStatus.ACTIVE),
+      orderBy("fullName", "asc")
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ uid: d.id, ...d.data() } as AppUser));
+  } catch (error) {
+    console.error("Erro ao listar profissionais ativos:", error);
+    return [];
+  }
 };
 
 /**
  * 6. Motor de Auditoria (Audit Logs)
- * Regista todas as ações críticas para conformidade e segurança
  */
 export const logAuditAction = async (log: Omit<AuditLog, 'id' | 'businessId'>): Promise<void> => {
   try {
@@ -127,9 +146,7 @@ export const logAuditAction = async (log: Omit<AuditLog, 'id' | 'businessId'>): 
       timestamp: log.timestamp || serverTimestamp()
     });
   } catch (error) {
-    // Falha silenciosa em produção para não interromper o fluxo do utilizador, 
-    // mas log no console em dev.
-    console.error("Falha ao gravar log de auditoria:", error);
+    console.warn("Falha ao gravar log de auditoria (Permissões insuficientes):", error);
   }
 };
 
@@ -137,8 +154,8 @@ export const logAuditAction = async (log: Omit<AuditLog, 'id' | 'businessId'>): 
  * 7. Obter Histórico de Auditoria
  */
 export const getAuditLogs = async (limitCount: number = 50): Promise<AuditLog[]> => {
-  const q = query(auditRef, orderBy("timestamp", "desc"), orderBy("action", "asc")); 
-  // Nota: Query limitada por segurança. Requer índice no Firestore.
+  // Simplificado para evitar erros de índice composto em fase inicial
+  const q = query(auditRef, orderBy("timestamp", "desc")); 
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as AuditLog));
 };

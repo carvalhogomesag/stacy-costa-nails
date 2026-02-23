@@ -1,7 +1,10 @@
+// src/firebase.ts
+
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage"; // 1. Importar o motor de Storage
+import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions"; // 1. Importar o motor de Functions
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,4 +21,8 @@ const app = initializeApp(firebaseConfig);
 // 2. Exportar os serviços corretamente
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app); // Esta é a linha que estava a faltar ou com erro
+export const storage = getStorage(app);
+
+// 3. Exportar Functions com a região correta (europe-west1 recomendada para PT)
+// Nota: Esta região deve ser a mesma definida no ficheiro functions/index.js
+export const functions = getFunctions(app, "europe-west1");

@@ -11,6 +11,7 @@ interface AuthContextType {
   userData: AppUser | null;
   loading: boolean;
   role: UserRole | null;
+  businessId: string | null; // Adicionado para facilitar o isolamento multi-tenant
   isAdmin: boolean;
   logout: () => Promise<void>;
 }
@@ -21,6 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [claims, setClaims] = useState<{ role?: UserRole, businessId?: string }>({});
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -28,14 +30,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(true);
         
         if (firebaseUser) {
+          // 1. EXTRAÇÃO DE CLAIMS (Hardening de Segurança)
+          let tokenResult = await firebaseUser.getIdTokenResult();
+          
+          // Se o utilizador acabou de ser convidado, as claims podem não estar no token local.
+          // Forçamos um refresh se role ou businessId estiverem em falta.
+          if (!tokenResult.claims.role || !tokenResult.claims.businessId) {
+            console.log("Claims em falta. A forçar atualização de token...");
+            await firebaseUser.getIdToken(true);
+            tokenResult = await firebaseUser.getIdTokenResult();
+          }
+
+          setClaims({
+            role: tokenResult.claims.role as UserRole,
+            businessId: tokenResult.claims.businessId as string
+          });
+
           setUser(firebaseUser);
           
-          // 1. Tentar obter o perfil
+          // 2. BUSCA DE PERFIL NO FIRESTORE
           let profile = await getUserProfile(firebaseUser.uid);
 
-          // 2. Lógica de Bootstrap (Auto-criação para o primeiro acesso)
-          if (!profile) {
-            console.log("Perfil não encontrado. A tentar criar perfil de OWNER...");
+          // 3. LÓGICA DE BOOTSTRAP (Apenas se as Rules permitirem ou for o primeiro OWNER)
+          if (!profile && !tokenResult.claims.role) {
+            console.log("Perfil e Claims não encontrados. A tentar criar perfil inicial...");
             try {
               await createAppUser({
                 uid: firebaseUser.uid,
@@ -44,21 +62,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: UserRole.OWNER,
                 status: UserStatus.ACTIVE
               });
-              // Tenta ler novamente após criar
               profile = await getUserProfile(firebaseUser.uid);
             } catch (createError) {
-              console.error("Erro crítico: As regras do Firestore impediram a auto-criação.", createError);
-              // Se falhar aqui, é porque as regras de segurança já estão ativas e barram o 'desconhecido'
+              console.warn("Bootstrap automático bloqueado pelas Rules. Provisionamento deve ser via Cloud Functions.");
             }
           }
           
           setUserData(profile);
+          
+          // SEGURANÇA MÁXIMA: Se após tudo, não houver BusinessId, o acesso é inválido
+          if (!tokenResult.claims.businessId && !profile) {
+             console.error("Utilizador sem vínculo empresarial. Logout por segurança.");
+             await signOut(auth);
+          }
+
         } else {
           setUser(null);
           setUserData(null);
+          setClaims({});
         }
       } catch (globalError) {
-        console.error("Erro na sincronização de autenticação:", globalError);
+        console.error("Erro crítico na sincronização de sessão:", globalError);
       } finally {
         setLoading(false);
       }
@@ -69,13 +93,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     setLoading(true);
-    await signOut(auth);
-    setUserData(null);
-    setUser(null);
-    setLoading(false);
+    try {
+      await signOut(auth);
+      setUserData(null);
+      setUser(null);
+      setClaims({});
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const role = userData?.role || null;
+  // Helpers derivados diretamente do Token de Segurança (Verdade Absoluta)
+  const role = (claims.role || userData?.role) as UserRole | null;
+  const businessId = claims.businessId || userData?.businessId || null;
   const isAdmin = role === UserRole.OWNER || role === UserRole.MANAGER;
 
   return (
@@ -84,13 +114,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       userData, 
       loading, 
       role, 
+      businessId,
       isAdmin, 
       logout 
     }}>
       {loading ? (
         <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6 text-center">
           <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-          <p className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">A validar acesso seguro...</p>
+          <p className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">A sincronizar chaves de segurança...</p>
         </div>
       ) : (
         children
